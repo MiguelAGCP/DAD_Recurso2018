@@ -60,6 +60,21 @@
         //border-style: none;
     }
 }
-
+.myHand{
+    max-width: 40px;
+    margin: 2px;
+    padding: 0px;
+}
+.oponentsHand{
+    max-width: 40px;
+    margin: -4px;
+    padding: 0px;
+    transform: rotate(90deg);
+}
+.playedCard{
+    max-width: 40px;
+    margin: 4px;
+    padding: 0px;
+}
 
 

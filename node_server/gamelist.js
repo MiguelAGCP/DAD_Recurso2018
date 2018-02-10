@@ -1,6 +1,6 @@
 /*jshint esversion: 6 */
 
-var MemoryGame = require('./gamemodel.js');
+var SuecaGame = require('./gamemodel.js');
 
 class GameList {
 	constructor() {
@@ -13,36 +13,25 @@ class GameList {
     	return game;
     }
 
-    createGame(playerName, socketID) {
+    createGame(playerID, playerName, socketID) {
     	this.contadorID = this.contadorID+1;
-    	var game = new MemoryGame(this.contadorID, playerName);
-    	game.player1SocketID = socketID;
+    	var game = new SuecaGame(this.contadorID, playerID, playerName, socketID);
+    	//game.player1SocketID = socketID;
     	this.games.set(game.gameID, game);
     	return game;
     }
 
-    joinGame(gameID, playerName, socketID) {
+    joinGame(gameID, playerID, playerName, socketID) {
     	let game = this.gameByID(gameID);
     	if (game===null) {
     		return null;
 		}
-		if(game.player1SocketID && !game.player2SocketID && !game.player3SocketID && !game.player4SocketID){
-			game.join(playerName);
-			game.player2SocketID = socketID;
-		}else
-		if(game.player1SocketID && game.player2SocketID && !game.player3SocketID && !game.player4SocketID){
-			game.join(playerName);
-			game.player3SocketID = socketID;
-		}else
-		if(game.player1SocketID && game.player2SocketID && game.player3SocketID && !game.player4SocketID){
-			game.join(playerName);
-			game.player4SocketID = socketID;
-		} 
+		game.join(playerID, playerName, socketID);
     	return game;
 	}
 	startGame(gameID, totCols, totLines, defaultSize){
 		let game = this.gameByID(gameID);
-		game.startGame(totCols, totLines, defaultSize);
+		game.startGame();
 		return game;
 	}
 
