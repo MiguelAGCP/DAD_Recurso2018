@@ -1,0 +1,95 @@
+<template>
+	<div>
+		<nav-bar></nav-bar>
+		<div class="jumbotron">
+			<h1>{{ title }}</h1>
+		</div>
+		<nav-dash></nav-dash>
+		<user-list v-if="currentUser==null" :users="users" @edit-click="editUser" @delete-click="deleteUser" @message="childMessage" ref="usersListRef"></user-list>
+
+		<div class="alert alert-success" v-if="showSuccess">
+
+			<button type="button" class="close-btn" v-on:click="showSuccess=false">&times;</button>
+			<strong>{{ successMessage }}</strong>
+		</div>
+		<user-edit :user="currentUser" @user-saved="savedUser" @user-canceled="cancelEdit" v-if="currentUser"></user-edit>
+	</div>
+</template>
+
+<script type="text/javascript">
+	import UserList from './userList.vue';
+	import UserEdit from './userEdit.vue';
+	import NavBar from './navBar.vue';
+	import NavBarDash from './navBarDash.vue';
+
+	export default {
+		data: function () {
+			return {
+				title: 'Dashboard',
+				showSuccess: false,
+				successMessage: '',
+				currentUser: null,
+				users: [],
+
+			}
+		},
+		methods: {
+			editUser: function (user) {
+				this.currentUser = user;
+				this.showSuccess = false;
+			},
+			deleteUser: function (user) {
+				console.log("USERID:  " + user.id)
+				axios.delete('api/users/' + user.id)
+					.then(response => {
+						console.log(response.data.data);
+						console.log(response.data);
+						this.showSuccess = true;
+						this.successMessage = 'User Deleted';
+						this.getUsers();
+					});
+			},
+			savedUser: function () {
+				this.currentUser = null;
+				//this.$refs.usersListRef.editingUser = null;
+				this.showSuccess = true;
+				this.successMessage = 'User Saved';
+			},
+			cancelEdit: function () {
+				this.currentUser = null;
+				//this.$refs.usersListRef.editingUser = null;
+				this.showSuccess = false;
+			},
+			getUsers: function () {
+				axios.get('api/users')
+					.then(response => {
+
+						console.log("Get Users");
+						this.users = response.data.data;
+					});
+			},
+			childMessage: function (message) {
+				this.showSuccess = true;
+				this.successMessage = message;
+			}
+		},
+		components: {
+			'user-list': UserList,
+			'user-edit': UserEdit,
+			'nav-bar': NavBar,
+			'nav-dash': NavBarDash,
+		},
+		mounted() {
+			this.getUsers();
+
+		}
+
+	}
+</script>
+
+<style scoped>
+	p {
+		font-size: 2em;
+		text-align: center;
+	}
+</style>

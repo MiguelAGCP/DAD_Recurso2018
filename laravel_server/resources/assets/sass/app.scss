@@ -1,0 +1,65 @@
+
+// Fonts
+@import url("https://fonts.googleapis.com/css?family=Raleway:300,400,600");
+
+// Variables
+@import "variables";
+
+// Bootstrap
+@import "~bootstrap-sass/assets/stylesheets/bootstrap";
+
+
+.close-btn{
+    border: none;
+    float: right;
+    background-color: transparent;
+}
+.game-zone-content{
+    height: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+}
+.messages{
+    list-style-type: none;
+}
+.chatBox{
+    overflow-y: scroll;
+}
+
+
+.board{
+    max-width: 276px;
+    margin: 0 auto;
+    height: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+	// border-style: solid;
+	// border-width: 0px 0 0 0px;
+    // border-color: black;
+    
+    div{
+        display: inline-block;
+        //border-style: solid;
+        //border-width: 1px;
+        // border-width: 2px 2px 2px 2px;
+        border-color: black;
+        margin-left: -2px;
+        margin-top: -2px;
+    }
+
+    img{
+        border-style: solid;
+        border-width: 1px;
+        border-color: black;
+        width: 40px;
+        height: 40px;
+        margin: 4px;
+        padding: 0;
+        //border-style: none;
+    }
+}
+
+
+

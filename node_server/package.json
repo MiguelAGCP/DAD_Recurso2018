@@ -1,0 +1,17 @@
+{
+  "name": "p6_node_server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "shuffle-array": "^1.0.1",
+    "sleep": "^5.1.1",
+    "socket.io": "^2.0.4",
+    "system-sleep": "^1.3.6"
+  }
+}
