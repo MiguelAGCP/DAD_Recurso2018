@@ -8405,3 +8405,27 @@ button.close {
   padding: 0;
 }
 
+.myHand {
+  max-width: 40px;
+  margin: 2px;
+  padding: 0px;
+}
+
+.oponentsHand {
+  max-width: 40px;
+  margin: -4px;
+  padding: 0px;
+  -webkit-transform: rotate(90deg);
+          transform: rotate(90deg);
+}
+
+.playedCard {
+  max-width: 40px;
+  margin: 4px;
+  padding: 0px;
+}
+
+.gameBoard {
+  background: #1aa31e;
+}
+

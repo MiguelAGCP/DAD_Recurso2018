@@ -1,20 +1,17 @@
 <template>
-    <div class="gameseparator gameBoard">
-        <!-- <div>
+    <div class="gameseparator">
+        <div>
             <h2 class="text-center">Game {{ game.gameID }}</h2>
             <br>
         </div>
         <div class="game-zone-content">
             <div class="alert text-center" :class="alerttype">
             </div>
-            <div class="container"> -->
+            <div class="container">
+                <!-- <div class="row"> -->
 
-
-
-        <!-- <div class="row"> -->
-
-        <!-- *****CHAT ZONE***** -->
-        <!-- <div class="col-sm-3 chatBox" v-bind:style="{ height: chatHeight }">
+                    <!-- *****CHAT ZONE***** -->
+                    <!-- <div class="col-sm-3 chatBox" v-bind:style="{ height: chatHeight }">
                         <ul class="messages">
                             <li v-for="message in messages">{{message.playerName}}: {{message.message}}</li>
                         </ul>
@@ -22,8 +19,7 @@
 
 
 
-
-        <!-- <div class="col-sm-6">
+                    <!-- <div class="col-sm-6">
                         <div class="board text-center col-md">
                             <div v-bind:style="{ width: maxBoardWith }">
                                 <div v-for="(piece, index) of game.board">
@@ -35,16 +31,59 @@
                     <div class="col-sm-6"> </div>
                 </div> -->
 
-        <player1-board :game="game" v-if="game.players[0] && game.players[0].playerID == $store.state.user.id"></player1-board>
-        <player2-board :game="game" v-if="game.players[1] && game.players[1].playerID == $store.state.user.id"></player2-board>
-        <player3-board :game="game" v-if="game.players[2] && game.players[2].playerID == $store.state.user.id"></player3-board>
-        <player4-board :game="game" v-if="game.players[3] && game.players[3].playerID == $store.state.user.id"></player4-board>
-      
-      
-      
-      
-      
-        <!-- <div class="row">
+
+
+                    <!-- TEAMMATE HAND -->
+                    <div class="row">
+                        <div class="col-md-12" style="text-align:center">
+                            <img v-for="i in 10" v-bind:src="cardImageURL('semFace')" class="myHand">
+                        </div>
+                    </div>
+
+
+                    <div class="row">
+                        <!-- LEFT PLAYER HAND -->
+                        <div class="col-md-1 col-md-offset-3">
+                            <img v-for="i in 10" v-bind:src="cardImageURL('semFace')" class="oponentsHand">
+                        </div>
+                        <!-- CENTER ZONE -->
+                        <div class="col-md-4">
+                            <!-- TEAMMATE CARD -->
+                            <div class="row">
+                                <div class="col-md-12" style="text-align:center">
+                                    <img v-bind:src="cardImageURL('c1')" class="playedCard">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <!-- LEFT PLAYER CARD -->
+                                <div class="col-md-6" style="text-align:center">
+                                    <img v-bind:src="cardImageURL('c2')" class="playedCard">
+                                </div>
+                                <!-- RIGHT PLAYER CARD -->
+                                <div class="col-md-6" style="text-align:center">
+                                    <img v-bind:src="cardImageURL('c3')" class="playedCard">
+                                </div>
+                            </div>
+                            <!-- MY CARD -->
+                            <div class="row">
+                                <div class="col-md-12" style="text-align:center">
+                                    <img v-bind:src="cardImageURL('c4')" class="playedCard">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- RIGHT PLAYER HAND -->
+                        <div class="col-md-1">
+                            <img v-for="i in 10" v-bind:src="cardImageURL('semFace')" class="oponentsHand">
+                        </div>
+                    </div>
+                    <!-- OUR HAND -->
+                    <div class="row">
+                        <div class="col-md-12" style="text-align:center">
+                            <img v-for="card of game.players[0].hand" v-bind:src="cardImageURL(card.imageToShow)" class="myHand">
+                        </div>
+                    </div>
+
+                    <!-- <div class="row">
                     <div class="col-sm">
                         <form action="">
                             <input v-model="input" autocomplete="off" />
@@ -54,23 +93,14 @@
                         </form>
                     </div>
                 </div> -->
-
-
-
-        <!-- 
                 </div>
             </div>
             <hr>
-        </div> -->
-    </div>
+        </div>
+    <!-- </div> -->
 </template>
 
 <script type="text/javascript">
-    import Player1Board from './boards/player1Board.vue';
-    import Player2Board from './boards/player2Board.vue';
-    import Player3Board from './boards/player3Board.vue';
-    import Player4Board from './boards/player4Board.vue';
-
     export default {
         props: ['game'],
         data: function () {
@@ -209,7 +239,7 @@
         methods: {
             cardImageURL(cardNumber) {
                 var imgSrc = String(cardNumber);
-                //   console.log(cardNumber);
+                console.log(cardNumber);
                 return 'img/' + imgSrc + '.png';
             },
             closeGame() {
@@ -240,12 +270,6 @@
                 this.input = "";
             }
         },
-        components: {
-            'player1Board': Player1Board,            
-            'player2Board': Player2Board,
-            'player3Board': Player3Board,
-            'player4Board': Player4Board,
-        }
     }
 </script>
 

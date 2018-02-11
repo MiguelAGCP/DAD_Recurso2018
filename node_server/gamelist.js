@@ -29,7 +29,7 @@ class GameList {
 		game.join(playerID, playerName, socketID);
     	return game;
 	}
-	startGame(gameID, totCols, totLines, defaultSize){
+	startGame(gameID){
 		let game = this.gameByID(gameID);
 		game.startGame();
 		return game;
@@ -54,7 +54,10 @@ class GameList {
     getConnectedGamesOf(socketID) {
     	let games = [];
     	for (var [key, value] of this.games) {
-    		if ((value.player1SocketID == socketID) || (value.player2SocketID == socketID) || value.player3SocketID || value.player4SocketID) {
+    		/* if ((value.player1SocketID == socketID) || (value.player2SocketID == socketID) || value.player3SocketID || value.player4SocketID) {
+    			games.push(value);
+			} */
+			if ((value.players[0].socketID == socketID) || (value.players[1].socketID == socketID) || value.players[2].socketID || value.players[3].socketID) {
     			games.push(value);
     		}
 		}

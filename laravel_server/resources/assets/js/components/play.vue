@@ -2,7 +2,9 @@
     <div>
         <nav-bar></nav-bar>
         <div>
-            <h3 class="text-center">{{ title }}</h3>
+            <!-- <h3 class="text-center">{{ title }}</h3>
+
+            
             <br>
             <h2>Current Player : {{ currentPlayer }}</h2>
             <p>Set current player name
@@ -11,7 +13,10 @@
             <p>
                 <em>Player name replaces authentication! Use different names on different browsers, and don't change it frequently.</em>
             </p>
-            <hr>
+            <hr> -->
+
+
+            
             <h3 class="text-center">Lobby</h3>
             <p>
                 <button class="btn btn-xs btn-success" v-on:click.prevent="createGame">Create a New Game</button>
@@ -46,11 +51,11 @@
         },
         sockets: {
             connect() {
-                console.log('socket connected');
+            //    console.log('socket connected');
                 this.socketId = this.$socket.id;
             },
             discconnect() {
-                console.log('socket disconnected');
+            //    console.log('socket disconnected');
                 this.socketId = "";
             },
             lobby_changed() {
@@ -60,6 +65,7 @@
                 this.loadActiveGames();
             },
             my_active_games(games) {
+                //console.table(games);
                 this.activeGames = games;
             },
             my_lobby_games(games) {
@@ -105,6 +111,7 @@
                 this.$socket.emit('get_my_activegames');
             },
             createGame() {
+                console.log("MY ID: " + this.$store.getters.getID);
                 if (this.currentPlayer == "") {
                     alert('Current Player is Empty - Cannot Create a Game');
                     return;
@@ -116,13 +123,15 @@
                 }
             },
             join(game) {
+                console.log("MY ID: " + this.$store.getters.getID);
+
                 if (game.player1 == this.currentPlayer) {
                     alert('Cannot join a game because your name is the same as Player 1');
                     return;
                 }
                 this.$socket.emit('join_game', {
                     gameID: game.gameID,
-                     playerID: this.$store.getters.getID,
+                    playerID: this.$store.getters.getID,
                     playerName: this.currentPlayer
                 });
             },
@@ -154,8 +163,8 @@
         },
         mounted() {
             this.currentPlayer =  this.$store.getters.getNickname;
-            this.loadLobby();
-            /*console.log(window.sessionStorage); */        }
+            this.loadLobby();      
+            }
 
     }
 </script>

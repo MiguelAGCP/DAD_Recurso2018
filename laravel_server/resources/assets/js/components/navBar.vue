@@ -48,8 +48,8 @@
 
             logout: function(){
 
-                console.log("Logging Out");
-                console.log(this.$store.state.user.headers.Authorization);
+            //    console.log("Logging Out");
+            //    console.log(this.$store.state.user.headers.Authorization);
 
                  var config = {
             headers: {
@@ -57,13 +57,13 @@
               Accept: "application/json"
             }
           };
-                 console.log("Logging Out");
-                console.log(config);
+            //     console.log("Logging Out");
+            //    console.log(config);
 
 
 
                 axios.post('api/logout', config).then(response=>{
-                    console.log(response.data);
+            //        console.log(response.data);
                    
                     this.$store.state.user.nickname = "";
                     this.$store.state.user.id = "";

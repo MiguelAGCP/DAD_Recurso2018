@@ -4,7 +4,6 @@
 		<div class="jumbotron">
 			<h1>{{ title }}</h1>
 		</div>
-		<nav-dash></nav-dash>
 		<user-list v-if="currentUser==null" :users="users" @edit-click="editUser" @delete-click="deleteUser" @message="childMessage" ref="usersListRef"></user-list>
 
 		<div class="alert alert-success" v-if="showSuccess">
@@ -20,7 +19,6 @@
 	import UserList from './userList.vue';
 	import UserEdit from './userEdit.vue';
 	import NavBar from './navBar.vue';
-	import NavBarDash from './navBarDash.vue';
 
 	export default {
 		data: function () {
@@ -39,11 +37,11 @@
 				this.showSuccess = false;
 			},
 			deleteUser: function (user) {
-				console.log("USERID:  " + user.id)
+			//	console.log("USERID:  " + user.id)
 				axios.delete('api/users/' + user.id)
 					.then(response => {
-						console.log(response.data.data);
-						console.log(response.data);
+					//	console.log(response.data.data);
+					//	console.log(response.data);
 						this.showSuccess = true;
 						this.successMessage = 'User Deleted';
 						this.getUsers();
@@ -64,7 +62,7 @@
 				axios.get('api/users')
 					.then(response => {
 
-						console.log("Get Users");
+					//	console.log("Get Users");
 						this.users = response.data.data;
 					});
 			},
@@ -77,7 +75,6 @@
 			'user-list': UserList,
 			'user-edit': UserEdit,
 			'nav-bar': NavBar,
-			'nav-dash': NavBarDash,
 		},
 		mounted() {
 			this.getUsers();

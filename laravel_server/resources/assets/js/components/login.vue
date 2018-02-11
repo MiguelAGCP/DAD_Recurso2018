@@ -190,7 +190,7 @@ export default {
 
          }).catch(  (error) => {
             const response = error.response;
-            console.log("ERROR:" + response.status)
+         //   console.log("ERROR:" + response.status)
          if(error.response.status===401)
              alert("Invalid username or password!");
         
@@ -200,7 +200,7 @@ export default {
 
 // Get and store user data by unique email/nick and redirect to default page
     getUserData: function(login, logType){
-        console.log("getUserData");
+       // console.log("getUserData");
        
           axios
             .get("api/users/getuserby"+logType+"/" + login, { headers: this.$store.state.user.headers})
@@ -211,7 +211,7 @@ export default {
 
 
 
-              console.log(response.data[0].nickname);  
+            //  console.log(response.data[0].nickname);  
               if (response.data[0].admin == "1") {
                 this.$store.commit('setAdmin', true);
                 return this.$router.push("/dash");
