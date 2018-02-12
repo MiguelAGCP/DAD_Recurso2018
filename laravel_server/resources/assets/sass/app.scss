@@ -19,6 +19,7 @@
     display: block;
     justify-content: center;
     align-items: center;
+    
 }
 .messages{
     list-style-type: none;
@@ -28,8 +29,8 @@
 }
 
 
-.board{
-    max-width: 276px;
+/* .board{
+    max-width: 720px;
     margin: 0 auto;
     height: 100%;
     display: block;
@@ -38,6 +39,8 @@
 	// border-style: solid;
 	// border-width: 0px 0 0 0px;
     // border-color: black;
+    background:rgb(26, 163, 30);
+    border-radius: 20px;
     
     div{
         display: inline-block;
@@ -59,17 +62,31 @@
         padding: 0;
         //border-style: none;
     }
-}
+} */
 .myHand{
     max-width: 40px;
     margin: 2px;
     padding: 0px;
+    //position: absolute;
+}
+.teamMateHand{
+    max-width: 40px;
+    margin: 2px;
+    padding: 0px;
+    //position: absolute;
+}
+.myHand:hover{
+    //max-width: 80px;
+    transform: scale(2);
+    margin: 2px;
+    padding: 0px;
+    position: absolute;
 }
 .oponentsHand{
     max-width: 40px;
-    margin: -4px;
+    margin: -8px;
     padding: 0px;
-    transform: rotate(90deg);
+    /* transform: rotate(90deg); */
 }
 .playedCard{
     max-width: 40px;
@@ -77,8 +94,37 @@
     padding: 0px;
 }
 
-.gameBoard{
+/* .playedCard:hover{
+    transform: scale(2);
+    margin: 2px;
+    padding: 0px;
+    position: absolute;
+} */
+
+
+.board{
+    /* max-width: 720px; */
+    margin: 0 auto;
+    height: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+	// border-style: solid;
+	// border-width: 0px 0 0 0px;
+    // border-color: black;
     background:rgb(26, 163, 30);
+    border-radius: 20px;
+    
+}
+
+.avatarBadge{
+    height: 32px;
+    width: 32px;
+}
+
+.avatarGame{
+    height: 64px;
+    width: 64px;
 }
 
 

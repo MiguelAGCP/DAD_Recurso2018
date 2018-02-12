@@ -19,6 +19,7 @@
             </div>
           <div class="dropdown col-md-1" align="left">
                 <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <img :src="myAvatar" class="img-circle avatarBadge">
                 {{$store.state.user.nickname}}
                 </button>
                   <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
@@ -65,11 +66,11 @@
                 axios.post('api/logout', config).then(response=>{
             //        console.log(response.data);
                    
-                    this.$store.state.user.nickname = "";
-                    this.$store.state.user.id = "";
-                    this.$store.state.user.refresh = "";
-                    this.$store.state.user.headers.Accept = "";
-                    this.$store.state.user.headers.Authorization = "";
+
+                    this.$store.commit('setNickname', "");
+                    this.$store.commit('setID', ""); 
+                    this.$store.commit('setRefreshToken', "");
+                    this.$store.commit('setHeaders', "");
                     sessionStorage.clear();
 
                     return this.$router.push("/index");
@@ -85,6 +86,9 @@
 
      },
      computed: {
+         myAvatar(){
+             return "img/avatars/" + this.$store.getters.getAvatar;
+         }
 
      },
      mounted(){

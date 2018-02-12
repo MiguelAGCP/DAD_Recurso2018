@@ -270,6 +270,115 @@ function deepMerge(target, source) {
 
 /***/ }),
 /* 1 */
+/***/ (function(module, exports) {
+
+/* globals __VUE_SSR_CONTEXT__ */
+
+// IMPORTANT: Do NOT use ES2015 features in this file.
+// This module is a runtime utility for cleaner component module output and will
+// be included in the final webpack user bundle.
+
+module.exports = function normalizeComponent (
+  rawScriptExports,
+  compiledTemplate,
+  functionalTemplate,
+  injectStyles,
+  scopeId,
+  moduleIdentifier /* server only */
+) {
+  var esModule
+  var scriptExports = rawScriptExports = rawScriptExports || {}
+
+  // ES6 modules interop
+  var type = typeof rawScriptExports.default
+  if (type === 'object' || type === 'function') {
+    esModule = rawScriptExports
+    scriptExports = rawScriptExports.default
+  }
+
+  // Vue.extend constructor export interop
+  var options = typeof scriptExports === 'function'
+    ? scriptExports.options
+    : scriptExports
+
+  // render functions
+  if (compiledTemplate) {
+    options.render = compiledTemplate.render
+    options.staticRenderFns = compiledTemplate.staticRenderFns
+    options._compiled = true
+  }
+
+  // functional template
+  if (functionalTemplate) {
+    options.functional = true
+  }
+
+  // scopedId
+  if (scopeId) {
+    options._scopeId = scopeId
+  }
+
+  var hook
+  if (moduleIdentifier) { // server build
+    hook = function (context) {
+      // 2.3 injection
+      context =
+        context || // cached call
+        (this.$vnode && this.$vnode.ssrContext) || // stateful
+        (this.parent && this.parent.$vnode && this.parent.$vnode.ssrContext) // functional
+      // 2.2 with runInNewContext: true
+      if (!context && typeof __VUE_SSR_CONTEXT__ !== 'undefined') {
+        context = __VUE_SSR_CONTEXT__
+      }
+      // inject component styles
+      if (injectStyles) {
+        injectStyles.call(this, context)
+      }
+      // register component module identifier for async chunk inferrence
+      if (context && context._registeredComponents) {
+        context._registeredComponents.add(moduleIdentifier)
+      }
+    }
+    // used by ssr in case component is cached and beforeCreate
+    // never gets called
+    options._ssrRegister = hook
+  } else if (injectStyles) {
+    hook = injectStyles
+  }
+
+  if (hook) {
+    var functional = options.functional
+    var existing = functional
+      ? options.render
+      : options.beforeCreate
+
+    if (!functional) {
+      // inject component registration as beforeCreate hook
+      options.beforeCreate = existing
+        ? [].concat(existing, hook)
+        : [hook]
+    } else {
+      // for template-only hot-reload because in that case the render fn doesn't
+      // go through the normalizer
+      options._injectStyles = hook
+      // register for functioal component in vue file
+      options.render = function renderWithStyleInjection (h, context) {
+        hook.call(context)
+        return existing(h, context)
+      }
+    }
+  }
+
+  return {
+    esModule: esModule,
+    exports: scriptExports,
+    options: options
+  }
+}
+
+
+/***/ }),
+/* 2 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -296,7 +405,7 @@ function deepMerge(target, source) {
 });
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -606,7 +715,310 @@ module.exports = {
 
 
 /***/ }),
-/* 3 */
+/* 4 */
+/***/ (function(module, exports) {
+
+/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+// css base code, injected by the css-loader
+module.exports = function(useSourceMap) {
+	var list = [];
+
+	// return the list of modules as css string
+	list.toString = function toString() {
+		return this.map(function (item) {
+			var content = cssWithMappingToString(item, useSourceMap);
+			if(item[2]) {
+				return "@media " + item[2] + "{" + content + "}";
+			} else {
+				return content;
+			}
+		}).join("");
+	};
+
+	// import a list of modules into the list
+	list.i = function(modules, mediaQuery) {
+		if(typeof modules === "string")
+			modules = [[null, modules, ""]];
+		var alreadyImportedModules = {};
+		for(var i = 0; i < this.length; i++) {
+			var id = this[i][0];
+			if(typeof id === "number")
+				alreadyImportedModules[id] = true;
+		}
+		for(i = 0; i < modules.length; i++) {
+			var item = modules[i];
+			// skip already imported module
+			// this implementation is not 100% perfect for weird media query combinations
+			//  when a module is imported multiple times with different media queries.
+			//  I hope this will never occur (Hey this way we have smaller bundles)
+			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
+				if(mediaQuery && !item[2]) {
+					item[2] = mediaQuery;
+				} else if(mediaQuery) {
+					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
+				}
+				list.push(item);
+			}
+		}
+	};
+	return list;
+};
+
+function cssWithMappingToString(item, useSourceMap) {
+	var content = item[1] || '';
+	var cssMapping = item[3];
+	if (!cssMapping) {
+		return content;
+	}
+
+	if (useSourceMap && typeof btoa === 'function') {
+		var sourceMapping = toComment(cssMapping);
+		var sourceURLs = cssMapping.sources.map(function (source) {
+			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
+		});
+
+		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
+	}
+
+	return [content].join('\n');
+}
+
+// Adapted from convert-source-map (MIT)
+function toComment(sourceMap) {
+	// eslint-disable-next-line no-undef
+	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
+	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
+
+	return '/*# ' + data + ' */';
+}
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
+  Modified by Evan You @yyx990803
+*/
+
+var hasDocument = typeof document !== 'undefined'
+
+if (typeof DEBUG !== 'undefined' && DEBUG) {
+  if (!hasDocument) {
+    throw new Error(
+    'vue-style-loader cannot be used in a non-browser environment. ' +
+    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
+  ) }
+}
+
+var listToStyles = __webpack_require__(191)
+
+/*
+type StyleObject = {
+  id: number;
+  parts: Array<StyleObjectPart>
+}
+
+type StyleObjectPart = {
+  css: string;
+  media: string;
+  sourceMap: ?string
+}
+*/
+
+var stylesInDom = {/*
+  [id: number]: {
+    id: number,
+    refs: number,
+    parts: Array<(obj?: StyleObjectPart) => void>
+  }
+*/}
+
+var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
+var singletonElement = null
+var singletonCounter = 0
+var isProduction = false
+var noop = function () {}
+
+// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
+// tags it will allow on a page
+var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
+
+module.exports = function (parentId, list, _isProduction) {
+  isProduction = _isProduction
+
+  var styles = listToStyles(parentId, list)
+  addStylesToDom(styles)
+
+  return function update (newList) {
+    var mayRemove = []
+    for (var i = 0; i < styles.length; i++) {
+      var item = styles[i]
+      var domStyle = stylesInDom[item.id]
+      domStyle.refs--
+      mayRemove.push(domStyle)
+    }
+    if (newList) {
+      styles = listToStyles(parentId, newList)
+      addStylesToDom(styles)
+    } else {
+      styles = []
+    }
+    for (var i = 0; i < mayRemove.length; i++) {
+      var domStyle = mayRemove[i]
+      if (domStyle.refs === 0) {
+        for (var j = 0; j < domStyle.parts.length; j++) {
+          domStyle.parts[j]()
+        }
+        delete stylesInDom[domStyle.id]
+      }
+    }
+  }
+}
+
+function addStylesToDom (styles /* Array<StyleObject> */) {
+  for (var i = 0; i < styles.length; i++) {
+    var item = styles[i]
+    var domStyle = stylesInDom[item.id]
+    if (domStyle) {
+      domStyle.refs++
+      for (var j = 0; j < domStyle.parts.length; j++) {
+        domStyle.parts[j](item.parts[j])
+      }
+      for (; j < item.parts.length; j++) {
+        domStyle.parts.push(addStyle(item.parts[j]))
+      }
+      if (domStyle.parts.length > item.parts.length) {
+        domStyle.parts.length = item.parts.length
+      }
+    } else {
+      var parts = []
+      for (var j = 0; j < item.parts.length; j++) {
+        parts.push(addStyle(item.parts[j]))
+      }
+      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
+    }
+  }
+}
+
+function createStyleElement () {
+  var styleElement = document.createElement('style')
+  styleElement.type = 'text/css'
+  head.appendChild(styleElement)
+  return styleElement
+}
+
+function addStyle (obj /* StyleObjectPart */) {
+  var update, remove
+  var styleElement = document.querySelector('style[data-vue-ssr-id~="' + obj.id + '"]')
+
+  if (styleElement) {
+    if (isProduction) {
+      // has SSR styles and in production mode.
+      // simply do nothing.
+      return noop
+    } else {
+      // has SSR styles but in dev mode.
+      // for some reason Chrome can't handle source map in server-rendered
+      // style tags - source maps in <style> only works if the style tag is
+      // created and inserted dynamically. So we remove the server rendered
+      // styles and inject new ones.
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  if (isOldIE) {
+    // use singleton mode for IE9.
+    var styleIndex = singletonCounter++
+    styleElement = singletonElement || (singletonElement = createStyleElement())
+    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
+    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
+  } else {
+    // use multi-style-tag mode in all other cases
+    styleElement = createStyleElement()
+    update = applyToTag.bind(null, styleElement)
+    remove = function () {
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  update(obj)
+
+  return function updateStyle (newObj /* StyleObjectPart */) {
+    if (newObj) {
+      if (newObj.css === obj.css &&
+          newObj.media === obj.media &&
+          newObj.sourceMap === obj.sourceMap) {
+        return
+      }
+      update(obj = newObj)
+    } else {
+      remove()
+    }
+  }
+}
+
+var replaceText = (function () {
+  var textStore = []
+
+  return function (index, replacement) {
+    textStore[index] = replacement
+    return textStore.filter(Boolean).join('\n')
+  }
+})()
+
+function applyToSingletonTag (styleElement, index, remove, obj) {
+  var css = remove ? '' : obj.css
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = replaceText(index, css)
+  } else {
+    var cssNode = document.createTextNode(css)
+    var childNodes = styleElement.childNodes
+    if (childNodes[index]) styleElement.removeChild(childNodes[index])
+    if (childNodes.length) {
+      styleElement.insertBefore(cssNode, childNodes[index])
+    } else {
+      styleElement.appendChild(cssNode)
+    }
+  }
+}
+
+function applyToTag (styleElement, obj) {
+  var css = obj.css
+  var media = obj.media
+  var sourceMap = obj.sourceMap
+
+  if (media) {
+    styleElement.setAttribute('media', media)
+  }
+
+  if (sourceMap) {
+    // https://developer.chrome.com/devtools/docs/javascript-debugging
+    // this makes source maps inside style tags work properly in Chrome
+    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
+    // http://stackoverflow.com/a/26603875
+    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
+  }
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = css
+  } else {
+    while (styleElement.firstChild) {
+      styleElement.removeChild(styleElement.firstChild)
+    }
+    styleElement.appendChild(document.createTextNode(css))
+  }
+}
+
+
+/***/ }),
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11175,116 +11587,7 @@ module.exports = Vue$3;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(19), __webpack_require__(108).setImmediate))
 
 /***/ }),
-/* 4 */
-/***/ (function(module, exports) {
-
-/* globals __VUE_SSR_CONTEXT__ */
-
-// IMPORTANT: Do NOT use ES2015 features in this file.
-// This module is a runtime utility for cleaner component module output and will
-// be included in the final webpack user bundle.
-
-module.exports = function normalizeComponent (
-  rawScriptExports,
-  compiledTemplate,
-  functionalTemplate,
-  injectStyles,
-  scopeId,
-  moduleIdentifier /* server only */
-) {
-  var esModule
-  var scriptExports = rawScriptExports = rawScriptExports || {}
-
-  // ES6 modules interop
-  var type = typeof rawScriptExports.default
-  if (type === 'object' || type === 'function') {
-    esModule = rawScriptExports
-    scriptExports = rawScriptExports.default
-  }
-
-  // Vue.extend constructor export interop
-  var options = typeof scriptExports === 'function'
-    ? scriptExports.options
-    : scriptExports
-
-  // render functions
-  if (compiledTemplate) {
-    options.render = compiledTemplate.render
-    options.staticRenderFns = compiledTemplate.staticRenderFns
-    options._compiled = true
-  }
-
-  // functional template
-  if (functionalTemplate) {
-    options.functional = true
-  }
-
-  // scopedId
-  if (scopeId) {
-    options._scopeId = scopeId
-  }
-
-  var hook
-  if (moduleIdentifier) { // server build
-    hook = function (context) {
-      // 2.3 injection
-      context =
-        context || // cached call
-        (this.$vnode && this.$vnode.ssrContext) || // stateful
-        (this.parent && this.parent.$vnode && this.parent.$vnode.ssrContext) // functional
-      // 2.2 with runInNewContext: true
-      if (!context && typeof __VUE_SSR_CONTEXT__ !== 'undefined') {
-        context = __VUE_SSR_CONTEXT__
-      }
-      // inject component styles
-      if (injectStyles) {
-        injectStyles.call(this, context)
-      }
-      // register component module identifier for async chunk inferrence
-      if (context && context._registeredComponents) {
-        context._registeredComponents.add(moduleIdentifier)
-      }
-    }
-    // used by ssr in case component is cached and beforeCreate
-    // never gets called
-    options._ssrRegister = hook
-  } else if (injectStyles) {
-    hook = injectStyles
-  }
-
-  if (hook) {
-    var functional = options.functional
-    var existing = functional
-      ? options.render
-      : options.beforeCreate
-
-    if (!functional) {
-      // inject component registration as beforeCreate hook
-      options.beforeCreate = existing
-        ? [].concat(existing, hook)
-        : [hook]
-    } else {
-      // for template-only hot-reload because in that case the render fn doesn't
-      // go through the normalizer
-      options._injectStyles = hook
-      // register for functioal component in vue file
-      options.render = function renderWithStyleInjection (h, context) {
-        hook.call(context)
-        return existing(h, context)
-      }
-    }
-  }
-
-  return {
-    esModule: esModule,
-    exports: scriptExports,
-    options: options
-  }
-}
-
-
-/***/ }),
-/* 5 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11300,7 +11603,7 @@ exports.addClass = addClass;
 exports.removeClass = removeClass;
 exports.setStyle = setStyle;
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -11478,7 +11781,7 @@ function setStyle(element, styleName, value) {
 };
 
 /***/ }),
-/* 6 */
+/* 8 */
 /***/ (function(module, exports) {
 
 // https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
@@ -11487,309 +11790,6 @@ var global = module.exports = typeof window != 'undefined' && window.Math == Mat
   // eslint-disable-next-line no-new-func
   : Function('return this')();
 if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
-
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports) {
-
-/*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-*/
-// css base code, injected by the css-loader
-module.exports = function(useSourceMap) {
-	var list = [];
-
-	// return the list of modules as css string
-	list.toString = function toString() {
-		return this.map(function (item) {
-			var content = cssWithMappingToString(item, useSourceMap);
-			if(item[2]) {
-				return "@media " + item[2] + "{" + content + "}";
-			} else {
-				return content;
-			}
-		}).join("");
-	};
-
-	// import a list of modules into the list
-	list.i = function(modules, mediaQuery) {
-		if(typeof modules === "string")
-			modules = [[null, modules, ""]];
-		var alreadyImportedModules = {};
-		for(var i = 0; i < this.length; i++) {
-			var id = this[i][0];
-			if(typeof id === "number")
-				alreadyImportedModules[id] = true;
-		}
-		for(i = 0; i < modules.length; i++) {
-			var item = modules[i];
-			// skip already imported module
-			// this implementation is not 100% perfect for weird media query combinations
-			//  when a module is imported multiple times with different media queries.
-			//  I hope this will never occur (Hey this way we have smaller bundles)
-			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
-				if(mediaQuery && !item[2]) {
-					item[2] = mediaQuery;
-				} else if(mediaQuery) {
-					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
-				}
-				list.push(item);
-			}
-		}
-	};
-	return list;
-};
-
-function cssWithMappingToString(item, useSourceMap) {
-	var content = item[1] || '';
-	var cssMapping = item[3];
-	if (!cssMapping) {
-		return content;
-	}
-
-	if (useSourceMap && typeof btoa === 'function') {
-		var sourceMapping = toComment(cssMapping);
-		var sourceURLs = cssMapping.sources.map(function (source) {
-			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
-		});
-
-		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
-	}
-
-	return [content].join('\n');
-}
-
-// Adapted from convert-source-map (MIT)
-function toComment(sourceMap) {
-	// eslint-disable-next-line no-undef
-	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
-	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
-
-	return '/*# ' + data + ' */';
-}
-
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*
-  MIT License http://www.opensource.org/licenses/mit-license.php
-  Author Tobias Koppers @sokra
-  Modified by Evan You @yyx990803
-*/
-
-var hasDocument = typeof document !== 'undefined'
-
-if (typeof DEBUG !== 'undefined' && DEBUG) {
-  if (!hasDocument) {
-    throw new Error(
-    'vue-style-loader cannot be used in a non-browser environment. ' +
-    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
-  ) }
-}
-
-var listToStyles = __webpack_require__(191)
-
-/*
-type StyleObject = {
-  id: number;
-  parts: Array<StyleObjectPart>
-}
-
-type StyleObjectPart = {
-  css: string;
-  media: string;
-  sourceMap: ?string
-}
-*/
-
-var stylesInDom = {/*
-  [id: number]: {
-    id: number,
-    refs: number,
-    parts: Array<(obj?: StyleObjectPart) => void>
-  }
-*/}
-
-var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
-var singletonElement = null
-var singletonCounter = 0
-var isProduction = false
-var noop = function () {}
-
-// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
-// tags it will allow on a page
-var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
-
-module.exports = function (parentId, list, _isProduction) {
-  isProduction = _isProduction
-
-  var styles = listToStyles(parentId, list)
-  addStylesToDom(styles)
-
-  return function update (newList) {
-    var mayRemove = []
-    for (var i = 0; i < styles.length; i++) {
-      var item = styles[i]
-      var domStyle = stylesInDom[item.id]
-      domStyle.refs--
-      mayRemove.push(domStyle)
-    }
-    if (newList) {
-      styles = listToStyles(parentId, newList)
-      addStylesToDom(styles)
-    } else {
-      styles = []
-    }
-    for (var i = 0; i < mayRemove.length; i++) {
-      var domStyle = mayRemove[i]
-      if (domStyle.refs === 0) {
-        for (var j = 0; j < domStyle.parts.length; j++) {
-          domStyle.parts[j]()
-        }
-        delete stylesInDom[domStyle.id]
-      }
-    }
-  }
-}
-
-function addStylesToDom (styles /* Array<StyleObject> */) {
-  for (var i = 0; i < styles.length; i++) {
-    var item = styles[i]
-    var domStyle = stylesInDom[item.id]
-    if (domStyle) {
-      domStyle.refs++
-      for (var j = 0; j < domStyle.parts.length; j++) {
-        domStyle.parts[j](item.parts[j])
-      }
-      for (; j < item.parts.length; j++) {
-        domStyle.parts.push(addStyle(item.parts[j]))
-      }
-      if (domStyle.parts.length > item.parts.length) {
-        domStyle.parts.length = item.parts.length
-      }
-    } else {
-      var parts = []
-      for (var j = 0; j < item.parts.length; j++) {
-        parts.push(addStyle(item.parts[j]))
-      }
-      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
-    }
-  }
-}
-
-function createStyleElement () {
-  var styleElement = document.createElement('style')
-  styleElement.type = 'text/css'
-  head.appendChild(styleElement)
-  return styleElement
-}
-
-function addStyle (obj /* StyleObjectPart */) {
-  var update, remove
-  var styleElement = document.querySelector('style[data-vue-ssr-id~="' + obj.id + '"]')
-
-  if (styleElement) {
-    if (isProduction) {
-      // has SSR styles and in production mode.
-      // simply do nothing.
-      return noop
-    } else {
-      // has SSR styles but in dev mode.
-      // for some reason Chrome can't handle source map in server-rendered
-      // style tags - source maps in <style> only works if the style tag is
-      // created and inserted dynamically. So we remove the server rendered
-      // styles and inject new ones.
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  if (isOldIE) {
-    // use singleton mode for IE9.
-    var styleIndex = singletonCounter++
-    styleElement = singletonElement || (singletonElement = createStyleElement())
-    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
-    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
-  } else {
-    // use multi-style-tag mode in all other cases
-    styleElement = createStyleElement()
-    update = applyToTag.bind(null, styleElement)
-    remove = function () {
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  update(obj)
-
-  return function updateStyle (newObj /* StyleObjectPart */) {
-    if (newObj) {
-      if (newObj.css === obj.css &&
-          newObj.media === obj.media &&
-          newObj.sourceMap === obj.sourceMap) {
-        return
-      }
-      update(obj = newObj)
-    } else {
-      remove()
-    }
-  }
-}
-
-var replaceText = (function () {
-  var textStore = []
-
-  return function (index, replacement) {
-    textStore[index] = replacement
-    return textStore.filter(Boolean).join('\n')
-  }
-})()
-
-function applyToSingletonTag (styleElement, index, remove, obj) {
-  var css = remove ? '' : obj.css
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = replaceText(index, css)
-  } else {
-    var cssNode = document.createTextNode(css)
-    var childNodes = styleElement.childNodes
-    if (childNodes[index]) styleElement.removeChild(childNodes[index])
-    if (childNodes.length) {
-      styleElement.insertBefore(cssNode, childNodes[index])
-    } else {
-      styleElement.appendChild(cssNode)
-    }
-  }
-}
-
-function applyToTag (styleElement, obj) {
-  var css = obj.css
-  var media = obj.media
-  var sourceMap = obj.sourceMap
-
-  if (media) {
-    styleElement.setAttribute('media', media)
-  }
-
-  if (sourceMap) {
-    // https://developer.chrome.com/devtools/docs/javascript-debugging
-    // this makes source maps inside style tags work properly in Chrome
-    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
-    // http://stackoverflow.com/a/26603875
-    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
-  }
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = css
-  } else {
-    while (styleElement.firstChild) {
-      styleElement.removeChild(styleElement.firstChild)
-    }
-    styleElement.appendChild(document.createTextNode(css))
-  }
-}
 
 
 /***/ }),
@@ -12005,7 +12005,7 @@ module.exports = function (it) {
 
 var store = __webpack_require__(42)('wks');
 var uid = __webpack_require__(26);
-var Symbol = __webpack_require__(6).Symbol;
+var Symbol = __webpack_require__(8).Symbol;
 var USE_SYMBOL = typeof Symbol == 'function';
 
 var $exports = module.exports = function (name) {
@@ -14820,7 +14820,7 @@ exports.default = typeof _symbol2.default === "function" && _typeof(_iterator2.d
 "use strict";
 /* WEBPACK VAR INJECTION */(function(process) {
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 var normalizeHeaderName = __webpack_require__(92);
 
 var DEFAULT_CONTENT_TYPE = {
@@ -14927,7 +14927,7 @@ var _zhCN = __webpack_require__(114);
 
 var _zhCN2 = _interopRequireDefault(_zhCN);
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -15720,7 +15720,7 @@ exports.default = function (target) {
 
 exports.__esModule = true;
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -15936,7 +15936,7 @@ exports.default = function () {
   return scrollBarWidth;
 };
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -16167,7 +16167,7 @@ var removeResizeListener = exports.removeResizeListener = function removeResizeL
 /* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(6);
+var global = __webpack_require__(8);
 var core = __webpack_require__(21);
 var ctx = __webpack_require__(136);
 var hide = __webpack_require__(12);
@@ -16286,7 +16286,7 @@ module.exports = function (key) {
 /* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(6);
+var global = __webpack_require__(8);
 var SHARED = '__core-js_shared__';
 var store = global[SHARED] || (global[SHARED] = {});
 module.exports = function (key) {
@@ -16349,7 +16349,7 @@ exports.f = __webpack_require__(16);
 /* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(6);
+var global = __webpack_require__(8);
 var core = __webpack_require__(21);
 var LIBRARY = __webpack_require__(45);
 var wksExt = __webpack_require__(48);
@@ -16369,7 +16369,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(193)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(195)
 /* template */
@@ -16421,7 +16421,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(197)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(199)
 /* template */
@@ -16469,7 +16469,7 @@ module.exports = Component.exports
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(201)
 /* template */
@@ -16755,7 +16755,7 @@ process.umask = function() { return 0; };
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 var settle = __webpack_require__(93);
 var buildURL = __webpack_require__(95);
 var parseHeaders = __webpack_require__(96);
@@ -18046,7 +18046,7 @@ exports.default = {
 exports.__esModule = true;
 exports.PopupManager = undefined;
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -18062,7 +18062,7 @@ var _scrollbarWidth = __webpack_require__(34);
 
 var _scrollbarWidth2 = _interopRequireDefault(_scrollbarWidth);
 
-var _dom = __webpack_require__(5);
+var _dom = __webpack_require__(7);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -18439,11 +18439,11 @@ module.exports = function ( delay, noTrailing, callback, debounceMode ) {
 
 exports.__esModule = true;
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
-var _dom = __webpack_require__(5);
+var _dom = __webpack_require__(7);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -18597,7 +18597,7 @@ module.exports = __webpack_require__(36);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(5);
+module.exports = __webpack_require__(7);
 
 /***/ }),
 
@@ -19320,7 +19320,7 @@ var esExports = { render: render, staticRenderFns: staticRenderFns }
 exports.__esModule = true;
 exports.default = scrollIntoView;
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -19389,7 +19389,7 @@ module.exports = !__webpack_require__(14) && !__webpack_require__(18)(function (
 /***/ (function(module, exports, __webpack_require__) {
 
 var isObject = __webpack_require__(23);
-var document = __webpack_require__(6).document;
+var document = __webpack_require__(8).document;
 // typeof document.createElement is 'object' in old IE
 var is = isObject(document) && isObject(document.createElement);
 module.exports = function (it) {
@@ -19630,7 +19630,7 @@ function required(rule, value, source, errors, options, type) {
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(83);
-module.exports = __webpack_require__(235);
+module.exports = __webpack_require__(255);
 
 
 /***/ }),
@@ -19659,7 +19659,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 __webpack_require__(84);
 
-window.Vue = __webpack_require__(3);
+window.Vue = __webpack_require__(6);
 
 //import shuffle from 'shuffle-array';
 
@@ -19677,10 +19677,10 @@ Vue.use(__WEBPACK_IMPORTED_MODULE_1_vue_socket_io___default.a, 'http://192.168.1
 
 var dash = Vue.component('user', __webpack_require__(188));
 var sueca_game = Vue.component('play', __webpack_require__(204));
-var login = Vue.component('login', __webpack_require__(219));
-var index = Vue.component('index', __webpack_require__(222));
-var statistics = Vue.component('statistics', __webpack_require__(227));
-var useraccount = Vue.component('useraccount', __webpack_require__(232));
+var login = Vue.component('login', __webpack_require__(239));
+var index = Vue.component('index', __webpack_require__(242));
+var statistics = Vue.component('statistics', __webpack_require__(247));
+var useraccount = Vue.component('useraccount', __webpack_require__(252));
 
 var routes = [{
   path: '/',
@@ -19719,6 +19719,7 @@ var store = new __WEBPACK_IMPORTED_MODULE_2_vuex__["a" /* default */].Store({
     user: {
       id: '',
       nickname: '',
+      avatar: '',
       admin: '',
       refreshToken: '',
       authToken: '',
@@ -19746,6 +19747,9 @@ var store = new __WEBPACK_IMPORTED_MODULE_2_vuex__["a" /* default */].Store({
     },
     setHeaders: function setHeaders(state, token) {
       state.user.headers.Authorization = 'Bearer ' + token;
+    },
+    setAvatar: function setAvatar(state, avatar) {
+      state.user.avatar = avatar;
     }
   },
   getters: {
@@ -19766,11 +19770,14 @@ var store = new __WEBPACK_IMPORTED_MODULE_2_vuex__["a" /* default */].Store({
     },
     getHeaders: function getHeaders(state) {
       return state.user.headers;
+    },
+    getAvatar: function getAvatar(state) {
+      return state.user.avatar;
     }
   },
 
-  methods: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["c" /* mapMutations */])(['setID', 'setNickname', 'setAdmin', 'setAuthToken', 'setRefreshToken', 'setHeaders'])),
-  computed: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["b" /* mapGetters */])(['getID', 'getNickname', 'getAuthToken', 'getRefreshToken', 'getAdmin', 'getHeaders'])),
+  methods: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["c" /* mapMutations */])(['setID', 'setNickname', 'setAdmin', 'setAuthToken', 'setRefreshToken', 'setHeaders', 'setAvatar'])),
+  computed: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["b" /* mapGetters */])(['getID', 'getNickname', 'getAuthToken', 'getRefreshToken', 'getAdmin', 'getHeaders', 'getAvatar'])),
   plugins: [vuexLocal.plugin]
 
 });
@@ -49593,7 +49600,7 @@ module.exports = __webpack_require__(89);
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 var bind = __webpack_require__(54);
 var Axios = __webpack_require__(91);
 var defaults = __webpack_require__(29);
@@ -49680,7 +49687,7 @@ function isSlowBuffer (obj) {
 
 
 var defaults = __webpack_require__(29);
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 var InterceptorManager = __webpack_require__(100);
 var dispatchRequest = __webpack_require__(101);
 var isAbsoluteURL = __webpack_require__(103);
@@ -49772,7 +49779,7 @@ module.exports = Axios;
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 
 module.exports = function normalizeHeaderName(headers, normalizedName) {
   utils.forEach(headers, function processHeader(value, name) {
@@ -49852,7 +49859,7 @@ module.exports = function enhanceError(error, config, code, request, response) {
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 
 function encode(val) {
   return encodeURIComponent(val).
@@ -49927,7 +49934,7 @@ module.exports = function buildURL(url, params, paramsSerializer) {
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 
 /**
  * Parse headers into an object
@@ -49971,7 +49978,7 @@ module.exports = function parseHeaders(headers) {
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 
 module.exports = (
   utils.isStandardBrowserEnv() ?
@@ -50089,7 +50096,7 @@ module.exports = btoa;
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 
 module.exports = (
   utils.isStandardBrowserEnv() ?
@@ -50149,7 +50156,7 @@ module.exports = (
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 
 function InterceptorManager() {
   this.handlers = [];
@@ -50208,7 +50215,7 @@ module.exports = InterceptorManager;
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 var transformData = __webpack_require__(102);
 var isCancel = __webpack_require__(58);
 var defaults = __webpack_require__(29);
@@ -50294,7 +50301,7 @@ module.exports = function dispatchRequest(config) {
 "use strict";
 
 
-var utils = __webpack_require__(2);
+var utils = __webpack_require__(3);
 
 /**
  * Transform the data for a request or a response
@@ -53212,7 +53219,7 @@ module.exports = __webpack_require__(61);
 /* 3 */
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(5);
+module.exports = __webpack_require__(7);
 
 /***/ }),
 /* 4 */
@@ -53224,7 +53231,7 @@ module.exports = __webpack_require__(9);
 /* 5 */
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(3);
+module.exports = __webpack_require__(6);
 
 /***/ }),
 /* 6 */
@@ -83743,11 +83750,11 @@ var RE_NARGS = /(%|)\{([0-9a-zA-Z_]+)\}/g;
 
 exports.__esModule = true;
 
-var _vue = __webpack_require__(3);
+var _vue = __webpack_require__(6);
 
 var _vue2 = _interopRequireDefault(_vue);
 
-var _dom = __webpack_require__(5);
+var _dom = __webpack_require__(7);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -86043,7 +86050,7 @@ var esExports = { render: render, staticRenderFns: staticRenderFns }
 
 exports.__esModule = true;
 
-var _dom = __webpack_require__(5);
+var _dom = __webpack_require__(7);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -86213,7 +86220,7 @@ module.exports = __webpack_require__(20);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(5);
+module.exports = __webpack_require__(7);
 
 /***/ }),
 
@@ -86508,7 +86515,7 @@ module.exports = __webpack_require__(9);
 /***/ 5:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(3);
+module.exports = __webpack_require__(6);
 
 /***/ }),
 
@@ -88633,7 +88640,7 @@ module.exports = __webpack_require__(36);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(5);
+module.exports = __webpack_require__(7);
 
 /***/ }),
 
@@ -90759,7 +90766,7 @@ module.exports = __webpack_require__(14) ? Object.defineProperties : function de
 /* 148 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var document = __webpack_require__(6).document;
+var document = __webpack_require__(8).document;
 module.exports = document && document.documentElement;
 
 
@@ -90787,7 +90794,7 @@ module.exports = Object.getPrototypeOf || function (O) {
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(151);
-var global = __webpack_require__(6);
+var global = __webpack_require__(8);
 var hide = __webpack_require__(12);
 var Iterators = __webpack_require__(46);
 var TO_STRING_TAG = __webpack_require__(16)('toStringTag');
@@ -90888,7 +90895,7 @@ module.exports = __webpack_require__(21).Symbol;
 "use strict";
 
 // ECMAScript 6 symbols shim
-var global = __webpack_require__(6);
+var global = __webpack_require__(8);
 var has = __webpack_require__(10);
 var DESCRIPTORS = __webpack_require__(14);
 var $export = __webpack_require__(37);
@@ -91338,7 +91345,7 @@ __webpack_require__(49)('observable');
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91633,7 +91640,7 @@ function pattern(rule, value, source, errors, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91670,7 +91677,7 @@ function method(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91709,7 +91716,7 @@ function number(rule, value, callback, source, options) {
 
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__util__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__rule___ = __webpack_require__(2);
 
 
 
@@ -91745,7 +91752,7 @@ function boolean(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91782,7 +91789,7 @@ function regexp(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91820,7 +91827,7 @@ function integer(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91858,7 +91865,7 @@ function floatFn(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91895,7 +91902,7 @@ function array(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91932,7 +91939,7 @@ function object(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -91970,7 +91977,7 @@ function enumerable(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -92010,7 +92017,7 @@ function pattern(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -92044,7 +92051,7 @@ function date(rule, value, callback, source, options) {
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_typeof__ = __webpack_require__(28);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_typeof___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_babel_runtime_helpers_typeof__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__rule___ = __webpack_require__(2);
 
 
 
@@ -92062,7 +92069,7 @@ function required(rule, value, callback, source, options) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__rule___ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__util__ = __webpack_require__(0);
 
 
@@ -92705,7 +92712,7 @@ module.exports = __webpack_require__(35);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(5);
+module.exports = __webpack_require__(7);
 
 /***/ }),
 
@@ -92777,7 +92784,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(189)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(192)
 /* template */
@@ -92831,7 +92838,7 @@ var content = __webpack_require__(190);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("58e77cb4", content, false);
+var update = __webpack_require__(5)("58e77cb4", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -92850,7 +92857,7 @@ if(false) {
 /* 190 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
@@ -93001,7 +93008,7 @@ var content = __webpack_require__(194);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("e36ab832", content, false);
+var update = __webpack_require__(5)("e36ab832", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -93020,7 +93027,7 @@ if(false) {
 /* 194 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
@@ -93180,7 +93187,7 @@ var content = __webpack_require__(198);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("a25a7f5e", content, false);
+var update = __webpack_require__(5)("a25a7f5e", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -93199,7 +93206,7 @@ if(false) {
 /* 198 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
@@ -93458,6 +93465,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
+//
 
 
 
@@ -93465,46 +93473,50 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 
 /* harmony default export */ __webpack_exports__["default"] = ({
 
-  methods: {
+    methods: {
 
-    logout: function logout() {
-      var _this = this;
+        logout: function logout() {
+            var _this = this;
 
-      //    console.log("Logging Out");
-      //    console.log(this.$store.state.user.headers.Authorization);
+            //    console.log("Logging Out");
+            //    console.log(this.$store.state.user.headers.Authorization);
 
-      var config = {
-        headers: {
-          Authorization: this.$store.state.user.headers.Authorization,
-          Accept: "application/json"
+            var config = {
+                headers: {
+                    Authorization: this.$store.state.user.headers.Authorization,
+                    Accept: "application/json"
+                }
+            };
+            //     console.log("Logging Out");
+            //    console.log(config);
+
+
+            axios.post('api/logout', config).then(function (response) {
+                //        console.log(response.data);
+
+
+                _this.$store.commit('setNickname', "");
+                _this.$store.commit('setID', "");
+                _this.$store.commit('setRefreshToken', "");
+                _this.$store.commit('setHeaders', "");
+                sessionStorage.clear();
+
+                return _this.$router.push("/index");
+            });
+        },
+
+        goToUserAccount: function goToUserAccount() {
+
+            this.$router.push("/useraccount");
         }
-      };
-      //     console.log("Logging Out");
-      //    console.log(config);
 
-
-      axios.post('api/logout', config).then(function (response) {
-        //        console.log(response.data);
-
-        _this.$store.state.user.nickname = "";
-        _this.$store.state.user.id = "";
-        _this.$store.state.user.refresh = "";
-        _this.$store.state.user.headers.Accept = "";
-        _this.$store.state.user.headers.Authorization = "";
-        sessionStorage.clear();
-
-        return _this.$router.push("/index");
-      });
     },
-
-    goToUserAccount: function goToUserAccount() {
-
-      this.$router.push("/useraccount");
-    }
-
-  },
-  computed: {},
-  mounted: function mounted() {}
+    computed: {
+        myAvatar: function myAvatar() {
+            return "img/avatars/" + this.$store.getters.getAvatar;
+        }
+    },
+    mounted: function mounted() {}
 });
 
 /***/ }),
@@ -93592,6 +93604,10 @@ var render = function() {
                 }
               },
               [
+                _c("img", {
+                  staticClass: "img-circle avatarBadge",
+                  attrs: { src: _vm.myAvatar }
+                }),
                 _vm._v(
                   "\n                " +
                     _vm._s(_vm.$store.state.user.nickname) +
@@ -93732,11 +93748,11 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(205)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(207)
 /* template */
-var __vue_template__ = __webpack_require__(218)
+var __vue_template__ = __webpack_require__(238)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -93786,7 +93802,7 @@ var content = __webpack_require__(206);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("494fae04", content, false);
+var update = __webpack_require__(5)("494fae04", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -93805,12 +93821,12 @@ if(false) {
 /* 206 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
 // module
-exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
+exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
 
 // exports
 
@@ -93949,7 +93965,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                     var activeGame = _step2.value;
 
                     if (game.gameID == activeGame.gameID) {
+
                         Object.assign(activeGame, game);
+                        console.table(game.players[0].cardTable);
                         if (activeGame.gameEnded) {
                             alert("Game " + activeGame.gameID + " has Ended \n The winner is: " + activeGame.players[activeGame.winner - 1].playerName);
                         }
@@ -93987,7 +94005,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             } else {
                 this.$socket.emit('create_game', {
                     playerName: this.currentPlayer,
-                    playerID: this.$store.getters.getID
+                    playerID: this.$store.getters.getID,
+                    avatar: this.$store.getters.getAvatar
                 });
             }
         },
@@ -94001,7 +94020,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             this.$socket.emit('join_game', {
                 gameID: game.gameID,
                 playerID: this.$store.getters.getID,
-                playerName: this.currentPlayer
+                playerName: this.currentPlayer,
+                avatar: this.$store.getters.getAvatar
             });
         },
         play: function play(game, index) {
@@ -94045,7 +94065,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(209)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(211)
 /* template */
@@ -94099,7 +94119,7 @@ var content = __webpack_require__(210);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("3d1fc83e", content, false);
+var update = __webpack_require__(5)("3d1fc83e", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -94118,7 +94138,7 @@ if(false) {
 /* 210 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
@@ -94310,11 +94330,11 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(214)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(216)
 /* template */
-var __vue_template__ = __webpack_require__(217)
+var __vue_template__ = __webpack_require__(237)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -94364,7 +94384,7 @@ var content = __webpack_require__(215);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("7ed11744", content, false);
+var update = __webpack_require__(5)("7ed11744", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -94383,7 +94403,7 @@ if(false) {
 /* 215 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
@@ -94399,69 +94419,14 @@ exports.push([module.i, "\n.gameseparator[data-v-81c9d1a2] {\n    border-style: 
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__boards_player1Board_vue__ = __webpack_require__(249);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__boards_player1Board_vue__ = __webpack_require__(217);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__boards_player1Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__boards_player1Board_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue__ = __webpack_require__(244);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue__ = __webpack_require__(222);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue__ = __webpack_require__(254);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue__ = __webpack_require__(227);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue__ = __webpack_require__(255);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue__ = __webpack_require__(232);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue__);
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 //
 //
 //
@@ -94501,127 +94466,27 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         }
     },
     computed: {
-        ownScore: function ownScore() {
-            switch (this.ownPlayerNumber) {
-                case 1:
-                    return this.game.players[0].score;
-                    break;
-                case 2:
-                    return this.game.players[1].score;
-                    break;
-                case 3:
-                    return this.game.players[2].score;
-                    break;
-                case 4:
-                    return this.game.players[3].score;
-                    break;
-                default:
-                    break;
-            }
-        },
-        disableForm: function disableForm() {
-            if (this.game.defaultSize || this.game.gameStarted) return true;else return false;
-        },
-        totTiles: function totTiles() {
-            return this.game.totCols * this.game.totLines;
-        },
-        isValidGame: function isValidGame() {
-            if (this.totTiles % 2 == 0 && this.totTiles <= 80) return true;else return false;
-        },
         ownPlayerNumber: function ownPlayerNumber() {
-            if (this.game.player1SocketID == this.$parent.socketId) {
+            if (this.game.players[0].playerID == this.$store.state.user.id) {
                 return 1;
-            } else if (this.game.player2SocketID == this.$parent.socketId) {
+            } else if (this.game.players[1].playerID == this.$store.state.user.id) {
                 return 2;
-            } else if (this.game.player3SocketID == this.$parent.socketId) {
+            } else if (this.game.players[2].playerID == this.$store.state.user.id) {
                 return 3;
-            } else if (this.game.player4SocketID == this.$parent.socketId) {
+            } else if (this.game.players[3].playerID == this.$store.state.user.id) {
                 return 4;
             }
 
             return 0;
-        },
-        ownPlayerName: function ownPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (ownNumber == 1) return this.game.players[0].playerName;
-            if (ownNumber == 2) return this.game.players[1].playerName;
-            if (ownNumber == 3) return this.game.players[2].playerName;
-            if (ownNumber == 4) return this.game.players[3].playerName;
-
-            return "Unknown";
-        },
-        adversaryPlayerName: function adversaryPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (this.game.playerTurn == 1) return this.game.players[0].playerName;
-            if (this.game.playerTurn == 2) return this.game.players[1].playerName;
-            if (this.game.playerTurn == 3) return this.game.players[2].playerName;
-            if (this.game.playerTurn == 4) return this.game.players[3].playerName;
-            return "Unknown";
-        },
-        message: function message() {
-            if (!this.game.gameStarted) {
-                return "Game has not started yet";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "Game has ended. You Win.";
-                }
-                return "Game has ended and " + this.adversaryPlayerName + " has won. You lost.";
-            } else {
-                if (this.game.playerTurn == this.ownPlayerNumber) {
-                    return "It's your turn";
-                } else {
-                    return "It's " + this.adversaryPlayerName + " turn";
-                }
-            }
-            return "Game is inconsistent";
-        },
-        alerttype: function alerttype() {
-            if (!this.game.gameStarted) {
-                return "alert-warning";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "alert-success";
-                } else if (this.game.winner == 0) {
-                    return "alert-info";
-                }
-                return "alert-danger";
-            }
-            if (this.game.playerTurn == this.ownPlayerNumber) {
-                return "alert-success";
-            } else {
-                return "alert-info";
-            }
-        },
-
-        maxBoardWith: function maxBoardWith() {
-            return this.game.totCols * 50 + "px";
-        },
-        chatHeight: function chatHeight() {
-            return this.game.totLines * 50 + "px";
         }
     },
     methods: {
-        cardImageURL: function cardImageURL(cardNumber) {
-            var imgSrc = String(cardNumber);
-            //   console.log(cardNumber);
-            return 'img/' + imgSrc + '.png';
-        },
-        closeGame: function closeGame() {
-            this.$parent.close(this.game);
-        },
-        startgame: function startgame() {
-            this.$emit("start-game", this.game);
-        },
-        clickPiece: function clickPiece(index) {
-            if (!this.game.gameEnded) {
-                if (this.game.playerTurn != this.ownPlayerNumber) {
-                    alert("It's not your turn to play");
-                } else {
-                    if (!this.game.board[index].flipped) {
-                        this.$emit("play", this.game, index);
-                    }
-                }
-            }
+        play: function play(index) {
+            this.$socket.emit('play', {
+                gameID: this.game.gameID,
+                playerNumber: this.ownPlayerNumber,
+                index: index
+            });
         },
         sendMessage: function sendMessage() {
             var data = {
@@ -94645,32 +94510,799 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* 217 */
 /***/ (function(module, exports, __webpack_require__) {
 
+var disposed = false
+var normalizeComponent = __webpack_require__(1)
+/* script */
+var __vue_script__ = __webpack_require__(220)
+/* template */
+var __vue_template__ = __webpack_require__(264)
+/* template functional */
+  var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/assets/js/components/boards/player1Board.vue"
+if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-fc545baa", Component.options)
+  } else {
+    hotAPI.reload("data-v-fc545baa", Component.options)
+' + '  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 218 */,
+/* 219 */,
+/* 220 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    props: ['game'],
+    data: function data() {
+        return {
+            input: "",
+            messages: []
+        };
+    },
+
+    methods: {
+        play: function play(index) {
+            this.$emit('play', index);
+        },
+        cardImageURL: function cardImageURL(cardNumber) {
+            var imgSrc = String(cardNumber);
+            return 'img/' + imgSrc + '.png';
+        },
+        avatarURL: function avatarURL(avatar) {
+            return 'img/avatars/' + avatar;
+        }
+    }
+});
+
+/***/ }),
+/* 221 */,
+/* 222 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(1)
+/* script */
+var __vue_script__ = __webpack_require__(225)
+/* template */
+var __vue_template__ = __webpack_require__(266)
+/* template functional */
+  var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/assets/js/components/boards/player2Board.vue"
+if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-761f434a", Component.options)
+  } else {
+    hotAPI.reload("data-v-761f434a", Component.options)
+' + '  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 223 */,
+/* 224 */,
+/* 225 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    props: ['game'],
+    data: function data() {
+        return {
+            input: "",
+            messages: []
+        };
+    },
+
+    methods: {
+        play: function play(index) {
+            this.$emit('play', index);
+        },
+        cardImageURL: function cardImageURL(cardNumber) {
+            var imgSrc = String(cardNumber);
+            return 'img/' + imgSrc + '.png';
+        },
+        avatarURL: function avatarURL(avatar) {
+            return 'img/avatars' + avatar;
+        }
+    }
+});
+
+/***/ }),
+/* 226 */,
+/* 227 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(1)
+/* script */
+var __vue_script__ = __webpack_require__(230)
+/* template */
+var __vue_template__ = __webpack_require__(267)
+/* template functional */
+  var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/assets/js/components/boards/player3Board.vue"
+if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-6a68b469", Component.options)
+  } else {
+    hotAPI.reload("data-v-6a68b469", Component.options)
+' + '  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 228 */,
+/* 229 */,
+/* 230 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    props: ['game'],
+    data: function data() {
+        return {
+            input: "",
+            messages: []
+        };
+    },
+
+    methods: {
+        play: function play(index) {
+            this.$emit('play', index);
+        },
+        cardImageURL: function cardImageURL(cardNumber) {
+            var imgSrc = String(cardNumber);
+            return 'img/' + imgSrc + '.png';
+        },
+        avatarURL: function avatarURL(avatar) {
+            return 'img/avatars' + avatar;
+        }
+    }
+});
+
+/***/ }),
+/* 231 */,
+/* 232 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(1)
+/* script */
+var __vue_script__ = __webpack_require__(235)
+/* template */
+var __vue_template__ = __webpack_require__(265)
+/* template functional */
+  var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/assets/js/components/boards/player4Board.vue"
+if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-5eb22588", Component.options)
+  } else {
+    hotAPI.reload("data-v-5eb22588", Component.options)
+' + '  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 233 */,
+/* 234 */,
+/* 235 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+    props: ['game'],
+    data: function data() {
+        return {
+            input: "",
+            messages: []
+        };
+    },
+
+    methods: {
+        play: function play(index) {
+            this.$emit('play', index);
+        },
+        cardImageURL: function cardImageURL(cardNumber) {
+            var imgSrc = String(cardNumber);
+            return 'img/' + imgSrc + '.png';
+        },
+        avatarURL: function avatarURL(avatar) {
+            return 'img/avatars' + avatar;
+        }
+    }
+});
+
+/***/ }),
+/* 236 */,
+/* 237 */
+/***/ (function(module, exports, __webpack_require__) {
+
 var render = function() {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c(
     "div",
-    { staticClass: "gameseparator gameBoard" },
     [
+      _vm.game.gameStarted &&
       _vm.game.players[0] &&
       _vm.game.players[0].playerID == _vm.$store.state.user.id
-        ? _c("player1-board", { attrs: { game: _vm.game } })
+        ? _c("player1-board", {
+            attrs: { game: _vm.game },
+            on: { play: _vm.play }
+          })
         : _vm._e(),
       _vm._v(" "),
+      _vm.game.gameStarted &&
       _vm.game.players[1] &&
       _vm.game.players[1].playerID == _vm.$store.state.user.id
-        ? _c("player2-board", { attrs: { game: _vm.game } })
+        ? _c("player2-board", {
+            attrs: { game: _vm.game },
+            on: { play: _vm.play }
+          })
         : _vm._e(),
       _vm._v(" "),
+      _vm.game.gameStarted &&
       _vm.game.players[2] &&
       _vm.game.players[2].playerID == _vm.$store.state.user.id
-        ? _c("player3-board", { attrs: { game: _vm.game } })
+        ? _c("player3-board", {
+            attrs: { game: _vm.game },
+            on: { play: _vm.play }
+          })
         : _vm._e(),
       _vm._v(" "),
+      _vm.game.gameStarted &&
       _vm.game.players[3] &&
       _vm.game.players[3].playerID == _vm.$store.state.user.id
-        ? _c("player4-board", { attrs: { game: _vm.game } })
+        ? _c("player4-board", {
+            attrs: { game: _vm.game },
+            on: { play: _vm.play }
+          })
         : _vm._e()
     ],
     1
@@ -94687,7 +95319,7 @@ if (false) {
 }
 
 /***/ }),
-/* 218 */
+/* 238 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -94774,15 +95406,15 @@ if (false) {
 }
 
 /***/ }),
-/* 219 */
+/* 239 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(220)
+var __vue_script__ = __webpack_require__(240)
 /* template */
-var __vue_template__ = __webpack_require__(221)
+var __vue_template__ = __webpack_require__(241)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -94822,7 +95454,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 220 */
+/* 240 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -95030,6 +95662,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_2_vue_router__["a" /* default */]();
 
         _this2.$store.commit('setNickname', response.data[0].nickname);
         _this2.$store.commit('setID', response.data[0].id);
+        _this2.$store.commit('setAvatar', response.data[0].avatar);
 
         //  console.log(response.data[0].nickname);  
         if (response.data[0].admin == "1") {
@@ -95049,7 +95682,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_2_vue_router__["a" /* default */]();
 });
 
 /***/ }),
-/* 221 */
+/* 241 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -95385,19 +96018,19 @@ if (false) {
 }
 
 /***/ }),
-/* 222 */
+/* 242 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(223)
+  __webpack_require__(243)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(225)
+var __vue_script__ = __webpack_require__(245)
 /* template */
-var __vue_template__ = __webpack_require__(226)
+var __vue_template__ = __webpack_require__(246)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -95437,17 +96070,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 223 */
+/* 243 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(224);
+var content = __webpack_require__(244);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("03ff617c", content, false);
+var update = __webpack_require__(5)("03ff617c", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -95463,10 +96096,10 @@ if(false) {
 }
 
 /***/ }),
-/* 224 */
+/* 244 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
@@ -95477,7 +96110,7 @@ exports.push([module.i, "\nhtml, body {\n    background-color: #fff;\n    color:
 
 
 /***/ }),
-/* 225 */
+/* 245 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -95529,7 +96162,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 });
 
 /***/ }),
-/* 226 */
+/* 246 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -95595,19 +96228,19 @@ if (false) {
 }
 
 /***/ }),
-/* 227 */
+/* 247 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(228)
+  __webpack_require__(248)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(230)
+var __vue_script__ = __webpack_require__(250)
 /* template */
-var __vue_template__ = __webpack_require__(231)
+var __vue_template__ = __webpack_require__(251)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -95647,17 +96280,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 228 */
+/* 248 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(229);
+var content = __webpack_require__(249);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(8)("1d8c00da", content, false);
+var update = __webpack_require__(5)("1d8c00da", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -95673,10 +96306,10 @@ if(false) {
 }
 
 /***/ }),
-/* 229 */
+/* 249 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(7)(undefined);
+exports = module.exports = __webpack_require__(4)(undefined);
 // imports
 
 
@@ -95687,7 +96320,7 @@ exports.push([module.i, "\np[data-v-76d6ec20] {\r\n  font-size: 2em;\r\n  text-a
 
 
 /***/ }),
-/* 230 */
+/* 250 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -95994,7 +96627,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 231 */
+/* 251 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -96274,15 +96907,15 @@ if (false) {
 }
 
 /***/ }),
-/* 232 */
+/* 252 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(233)
+var __vue_script__ = __webpack_require__(253)
 /* template */
-var __vue_template__ = __webpack_require__(234)
+var __vue_template__ = __webpack_require__(254)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -96322,7 +96955,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 233 */
+/* 253 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -96346,7 +96979,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 });
 
 /***/ }),
-/* 234 */
+/* 254 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -96366,922 +96999,28 @@ if (false) {
 }
 
 /***/ }),
-/* 235 */
+/* 255 */
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
 
 /***/ }),
-/* 236 */,
-/* 237 */,
-/* 238 */,
-/* 239 */,
-/* 240 */,
-/* 241 */,
-/* 242 */,
-/* 243 */,
-/* 244 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(245)
-}
-var normalizeComponent = __webpack_require__(4)
-/* script */
-var __vue_script__ = __webpack_require__(247)
-/* template */
-var __vue_template__ = __webpack_require__(248)
-/* template functional */
-  var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = injectStyle
-/* scopeId */
-var __vue_scopeId__ = "data-v-761f434a"
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/assets/js/components/boards/player2Board.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-761f434a", Component.options)
-  } else {
-    hotAPI.reload("data-v-761f434a", Component.options)
-' + '  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 245 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(246);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(8)("04af2f8e", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-761f434a\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player2Board.vue", function() {
-     var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-761f434a\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player2Board.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 246 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(7)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "\n.gameseparator[data-v-761f434a] {\n    border-style: solid;\n    border-width: 2px 0 0 0;\n    border-color: black;\n}\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 247 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    props: ['game'],
-    data: function data() {
-        return {
-            input: "",
-            messages: []
-        };
-    },
-    sockets: {
-        message_received: function message_received(data) {
-
-            if (this.game.gameID == data.gameID) {
-                var playerAndMessage = {
-                    playerName: data.playerName,
-                    message: data.message
-                };
-                this.messages.push(playerAndMessage);
-            }
-        }
-    },
-    computed: {
-        ownScore: function ownScore() {
-            switch (this.ownPlayerNumber) {
-                case 1:
-                    return this.game.players[0].score;
-                    break;
-                case 2:
-                    return this.game.players[1].score;
-                    break;
-                case 3:
-                    return this.game.players[2].score;
-                    break;
-                case 4:
-                    return this.game.players[3].score;
-                    break;
-                default:
-                    break;
-            }
-        },
-        disableForm: function disableForm() {
-            if (this.game.defaultSize || this.game.gameStarted) return true;else return false;
-        },
-        totTiles: function totTiles() {
-            return this.game.totCols * this.game.totLines;
-        },
-        isValidGame: function isValidGame() {
-            if (this.totTiles % 2 == 0 && this.totTiles <= 80) return true;else return false;
-        },
-        ownPlayerNumber: function ownPlayerNumber() {
-            if (this.game.player1SocketID == this.$parent.socketId) {
-                return 1;
-            } else if (this.game.player2SocketID == this.$parent.socketId) {
-                return 2;
-            } else if (this.game.player3SocketID == this.$parent.socketId) {
-                return 3;
-            } else if (this.game.player4SocketID == this.$parent.socketId) {
-                return 4;
-            }
-
-            return 0;
-        },
-        ownPlayerName: function ownPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (ownNumber == 1) return this.game.players[0].playerName;
-            if (ownNumber == 2) return this.game.players[1].playerName;
-            if (ownNumber == 3) return this.game.players[2].playerName;
-            if (ownNumber == 4) return this.game.players[3].playerName;
-
-            return "Unknown";
-        },
-        adversaryPlayerName: function adversaryPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (this.game.playerTurn == 1) return this.game.players[0].playerName;
-            if (this.game.playerTurn == 2) return this.game.players[1].playerName;
-            if (this.game.playerTurn == 3) return this.game.players[2].playerName;
-            if (this.game.playerTurn == 4) return this.game.players[3].playerName;
-            return "Unknown";
-        },
-        message: function message() {
-            if (!this.game.gameStarted) {
-                return "Game has not started yet";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "Game has ended. You Win.";
-                }
-                return "Game has ended and " + this.adversaryPlayerName + " has won. You lost.";
-            } else {
-                if (this.game.playerTurn == this.ownPlayerNumber) {
-                    return "It's your turn";
-                } else {
-                    return "It's " + this.adversaryPlayerName + " turn";
-                }
-            }
-            return "Game is inconsistent";
-        },
-        alerttype: function alerttype() {
-            if (!this.game.gameStarted) {
-                return "alert-warning";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "alert-success";
-                } else if (this.game.winner == 0) {
-                    return "alert-info";
-                }
-                return "alert-danger";
-            }
-            if (this.game.playerTurn == this.ownPlayerNumber) {
-                return "alert-success";
-            } else {
-                return "alert-info";
-            }
-        },
-
-        maxBoardWith: function maxBoardWith() {
-            return this.game.totCols * 50 + "px";
-        },
-        chatHeight: function chatHeight() {
-            return this.game.totLines * 50 + "px";
-        }
-    },
-    methods: {
-        cardImageURL: function cardImageURL(cardNumber) {
-            var imgSrc = String(cardNumber);
-            // console.log(cardNumber);
-            return 'img/' + imgSrc + '.png';
-        },
-        closeGame: function closeGame() {
-            this.$parent.close(this.game);
-        },
-        startgame: function startgame() {
-            this.$emit("start-game", this.game);
-        },
-        clickPiece: function clickPiece(index) {
-            if (!this.game.gameEnded) {
-                if (this.game.playerTurn != this.ownPlayerNumber) {
-                    alert("It's not your turn to play");
-                } else {
-                    if (!this.game.board[index].flipped) {
-                        this.$emit("play", this.game, index);
-                    }
-                }
-            }
-        },
-        sendMessage: function sendMessage() {
-            var data = {
-                gameID: this.game.gameID,
-                playerName: this.ownPlayerName,
-                message: this.input
-            };
-            this.$emit("send-message", data);
-            this.input = "";
-        }
-    }
-});
-
-/***/ }),
-/* 248 */
+/* 256 */,
+/* 257 */,
+/* 258 */,
+/* 259 */,
+/* 260 */,
+/* 261 */,
+/* 262 */,
+/* 263 */,
+/* 264 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _c("div", { staticClass: "gameseparator" }, [
-    _c("div", [
-      _c("h2", { staticClass: "text-center" }, [
-        _vm._v("Game " + _vm._s(_vm.game.gameID))
-      ]),
-      _vm._v(" "),
-      _c("br")
-    ]),
-    _vm._v(" "),
-    _c("div", { staticClass: "game-zone-content" }, [
-      _c("div", { staticClass: "container" }, [
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[0].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                      })
-                    })
-                  )
-                : _vm._e()
-            ]
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c("div", { staticClass: "col-md-1 col-md-offset-3" }, [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[3].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "oponentsHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-4" }, [
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c1") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c2") }
-                  })
-                ]
-              ),
-              _vm._v(" "),
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c3") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c4") }
-                  })
-                ]
-              )
-            ])
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-1" }, [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[2].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "oponentsHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[1].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.image) }
-                      })
-                    })
-                  )
-                : _vm._e()
-            ]
-          )
-        ])
-      ])
-    ]),
-    _vm._v(" "),
-    _c("hr")
-  ])
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-761f434a", module.exports)
-  }
-}
-
-/***/ }),
-/* 249 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(250)
-}
-var normalizeComponent = __webpack_require__(4)
-/* script */
-var __vue_script__ = __webpack_require__(252)
-/* template */
-var __vue_template__ = __webpack_require__(253)
-/* template functional */
-  var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = injectStyle
-/* scopeId */
-var __vue_scopeId__ = "data-v-fc545baa"
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/assets/js/components/boards/player1Board.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-fc545baa", Component.options)
-  } else {
-    hotAPI.reload("data-v-fc545baa", Component.options)
-' + '  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 250 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(251);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(8)("72ce042f", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-fc545baa\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player1Board.vue", function() {
-     var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-fc545baa\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player1Board.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 251 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(7)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "\n.gameseparator[data-v-fc545baa] {\n    border-style: solid;\n    border-width: 2px 0 0 0;\n    border-color: black;\n}\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 252 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    props: ['game'],
-    data: function data() {
-        return {
-            input: "",
-            messages: []
-        };
-    },
-    sockets: {
-        message_received: function message_received(data) {
-
-            if (this.game.gameID == data.gameID) {
-                var playerAndMessage = {
-                    playerName: data.playerName,
-                    message: data.message
-                };
-                this.messages.push(playerAndMessage);
-            }
-        }
-    },
-    computed: {
-        ownScore: function ownScore() {
-            switch (this.ownPlayerNumber) {
-                case 1:
-                    return this.game.players[0].score;
-                    break;
-                case 2:
-                    return this.game.players[1].score;
-                    break;
-                case 3:
-                    return this.game.players[2].score;
-                    break;
-                case 4:
-                    return this.game.players[3].score;
-                    break;
-                default:
-                    break;
-            }
-        },
-        disableForm: function disableForm() {
-            if (this.game.defaultSize || this.game.gameStarted) return true;else return false;
-        },
-        totTiles: function totTiles() {
-            return this.game.totCols * this.game.totLines;
-        },
-        isValidGame: function isValidGame() {
-            if (this.totTiles % 2 == 0 && this.totTiles <= 80) return true;else return false;
-        },
-        ownPlayerNumber: function ownPlayerNumber() {
-            if (this.game.player1SocketID == this.$parent.socketId) {
-                return 1;
-            } else if (this.game.player2SocketID == this.$parent.socketId) {
-                return 2;
-            } else if (this.game.player3SocketID == this.$parent.socketId) {
-                return 3;
-            } else if (this.game.player4SocketID == this.$parent.socketId) {
-                return 4;
-            }
-
-            return 0;
-        },
-        ownPlayerName: function ownPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (ownNumber == 1) return this.game.players[0].playerName;
-            if (ownNumber == 2) return this.game.players[1].playerName;
-            if (ownNumber == 3) return this.game.players[2].playerName;
-            if (ownNumber == 4) return this.game.players[3].playerName;
-
-            return "Unknown";
-        },
-        adversaryPlayerName: function adversaryPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (this.game.playerTurn == 1) return this.game.players[0].playerName;
-            if (this.game.playerTurn == 2) return this.game.players[1].playerName;
-            if (this.game.playerTurn == 3) return this.game.players[2].playerName;
-            if (this.game.playerTurn == 4) return this.game.players[3].playerName;
-            return "Unknown";
-        },
-        message: function message() {
-            if (!this.game.gameStarted) {
-                return "Game has not started yet";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "Game has ended. You Win.";
-                }
-                return "Game has ended and " + this.adversaryPlayerName + " has won. You lost.";
-            } else {
-                if (this.game.playerTurn == this.ownPlayerNumber) {
-                    return "It's your turn";
-                } else {
-                    return "It's " + this.adversaryPlayerName + " turn";
-                }
-            }
-            return "Game is inconsistent";
-        },
-        alerttype: function alerttype() {
-            if (!this.game.gameStarted) {
-                return "alert-warning";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "alert-success";
-                } else if (this.game.winner == 0) {
-                    return "alert-info";
-                }
-                return "alert-danger";
-            }
-            if (this.game.playerTurn == this.ownPlayerNumber) {
-                return "alert-success";
-            } else {
-                return "alert-info";
-            }
-        },
-
-        maxBoardWith: function maxBoardWith() {
-            return this.game.totCols * 50 + "px";
-        },
-        chatHeight: function chatHeight() {
-            return this.game.totLines * 50 + "px";
-        }
-    },
-    methods: {
-        cardImageURL: function cardImageURL(cardNumber) {
-            var imgSrc = String(cardNumber);
-            // console.log(cardNumber);
-            return 'img/' + imgSrc + '.png';
-        },
-        closeGame: function closeGame() {
-            this.$parent.close(this.game);
-        },
-        startgame: function startgame() {
-            this.$emit("start-game", this.game);
-        },
-        clickPiece: function clickPiece(index) {
-            if (!this.game.gameEnded) {
-                if (this.game.playerTurn != this.ownPlayerNumber) {
-                    alert("It's not your turn to play");
-                } else {
-                    if (!this.game.board[index].flipped) {
-                        this.$emit("play", this.game, index);
-                    }
-                }
-            }
-        },
-        sendMessage: function sendMessage() {
-            var data = {
-                gameID: this.game.gameID,
-                playerName: this.ownPlayerName,
-                message: this.input
-            };
-            this.$emit("send-message", data);
-            this.input = "";
-        }
-    }
-});
-
-/***/ }),
-/* 253 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", { staticClass: "gameseparator" }, [
+  return _c("div", [
     _c("div", [
       _c("h2", { staticClass: "text-center bg-primary text-white" }, [
         _vm._v("Game " + _vm._s(_vm.game.gameID))
@@ -97290,147 +97029,253 @@ var render = function() {
       _c("br")
     ]),
     _vm._v(" "),
-    _c("div", { staticClass: "game-zone-content" }, [
-      _c("div", { staticClass: "container" }, [
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[1].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.imageToShow) }
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[1].hand, function(card) {
+                    return _c("img", {
+                      staticClass: "teamMateHand",
+                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[2].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
                       })
-                    })
-                  )
-                : _vm._e()
-            ]
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c("div", { staticClass: "col-md-1 col-md-offset-3" }, [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[2].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "oponentsHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-4" }, [
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c1") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c2") }
-                  })
-                ]
-              ),
-              _vm._v(" "),
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c3") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c4") }
-                  })
-                ]
-              )
+                    )
+                  : _vm._e()
+              ])
             ])
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-1" }, [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[3].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "oponentsHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
           ])
         ]),
         _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[0].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.image) }
-                      })
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
                     })
-                  )
-                : _vm._e()
-            ]
-          )
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[3].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
         ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[0].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+            })
+          ]
+        )
       ])
     ]),
     _vm._v(" "),
@@ -97448,575 +97293,269 @@ if (false) {
 }
 
 /***/ }),
-/* 254 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(260)
-}
-var normalizeComponent = __webpack_require__(4)
-/* script */
-var __vue_script__ = __webpack_require__(262)
-/* template */
-var __vue_template__ = __webpack_require__(263)
-/* template functional */
-  var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = injectStyle
-/* scopeId */
-var __vue_scopeId__ = "data-v-6a68b469"
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/assets/js/components/boards/player3Board.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-6a68b469", Component.options)
-  } else {
-    hotAPI.reload("data-v-6a68b469", Component.options)
-' + '  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 255 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-function injectStyle (ssrContext) {
-  if (disposed) return
-  __webpack_require__(256)
-}
-var normalizeComponent = __webpack_require__(4)
-/* script */
-var __vue_script__ = __webpack_require__(258)
-/* template */
-var __vue_template__ = __webpack_require__(259)
-/* template functional */
-  var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = injectStyle
-/* scopeId */
-var __vue_scopeId__ = "data-v-5eb22588"
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/assets/js/components/boards/player4Board.vue"
-if (Component.esModule && Object.keys(Component.esModule).some(function (key) {  return key !== "default" && key.substr(0, 2) !== "__"})) {  console.error("named exports are not supported in *.vue files.")}
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-5eb22588", Component.options)
-  } else {
-    hotAPI.reload("data-v-5eb22588", Component.options)
-' + '  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 256 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(257);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(8)("354631d0", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-5eb22588\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player4Board.vue", function() {
-     var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-5eb22588\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player4Board.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 257 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(7)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "\n.gameseparator[data-v-5eb22588] {\n    border-style: solid;\n    border-width: 2px 0 0 0;\n    border-color: black;\n}\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 258 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    props: ['game'],
-    data: function data() {
-        return {
-            input: "",
-            messages: []
-        };
-    },
-    sockets: {
-        message_received: function message_received(data) {
-
-            if (this.game.gameID == data.gameID) {
-                var playerAndMessage = {
-                    playerName: data.playerName,
-                    message: data.message
-                };
-                this.messages.push(playerAndMessage);
-            }
-        }
-    },
-    computed: {
-        ownScore: function ownScore() {
-            switch (this.ownPlayerNumber) {
-                case 1:
-                    return this.game.players[0].score;
-                    break;
-                case 2:
-                    return this.game.players[1].score;
-                    break;
-                case 3:
-                    return this.game.players[2].score;
-                    break;
-                case 4:
-                    return this.game.players[3].score;
-                    break;
-                default:
-                    break;
-            }
-        },
-        disableForm: function disableForm() {
-            if (this.game.defaultSize || this.game.gameStarted) return true;else return false;
-        },
-        totTiles: function totTiles() {
-            return this.game.totCols * this.game.totLines;
-        },
-        isValidGame: function isValidGame() {
-            if (this.totTiles % 2 == 0 && this.totTiles <= 80) return true;else return false;
-        },
-        ownPlayerNumber: function ownPlayerNumber() {
-            if (this.game.player1SocketID == this.$parent.socketId) {
-                return 1;
-            } else if (this.game.player2SocketID == this.$parent.socketId) {
-                return 2;
-            } else if (this.game.player3SocketID == this.$parent.socketId) {
-                return 3;
-            } else if (this.game.player4SocketID == this.$parent.socketId) {
-                return 4;
-            }
-
-            return 0;
-        },
-        ownPlayerName: function ownPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (ownNumber == 1) return this.game.players[0].playerName;
-            if (ownNumber == 2) return this.game.players[1].playerName;
-            if (ownNumber == 3) return this.game.players[2].playerName;
-            if (ownNumber == 4) return this.game.players[3].playerName;
-
-            return "Unknown";
-        },
-        adversaryPlayerName: function adversaryPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (this.game.playerTurn == 1) return this.game.players[0].playerName;
-            if (this.game.playerTurn == 2) return this.game.players[1].playerName;
-            if (this.game.playerTurn == 3) return this.game.players[2].playerName;
-            if (this.game.playerTurn == 4) return this.game.players[3].playerName;
-            return "Unknown";
-        },
-        message: function message() {
-            if (!this.game.gameStarted) {
-                return "Game has not started yet";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "Game has ended. You Win.";
-                }
-                return "Game has ended and " + this.adversaryPlayerName + " has won. You lost.";
-            } else {
-                if (this.game.playerTurn == this.ownPlayerNumber) {
-                    return "It's your turn";
-                } else {
-                    return "It's " + this.adversaryPlayerName + " turn";
-                }
-            }
-            return "Game is inconsistent";
-        },
-        alerttype: function alerttype() {
-            if (!this.game.gameStarted) {
-                return "alert-warning";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "alert-success";
-                } else if (this.game.winner == 0) {
-                    return "alert-info";
-                }
-                return "alert-danger";
-            }
-            if (this.game.playerTurn == this.ownPlayerNumber) {
-                return "alert-success";
-            } else {
-                return "alert-info";
-            }
-        },
-
-        maxBoardWith: function maxBoardWith() {
-            return this.game.totCols * 50 + "px";
-        },
-        chatHeight: function chatHeight() {
-            return this.game.totLines * 50 + "px";
-        }
-    },
-    methods: {
-        cardImageURL: function cardImageURL(cardNumber) {
-            var imgSrc = String(cardNumber);
-            // console.log(cardNumber);
-            return 'img/' + imgSrc + '.png';
-        },
-        closeGame: function closeGame() {
-            this.$parent.close(this.game);
-        },
-        startgame: function startgame() {
-            this.$emit("start-game", this.game);
-        },
-        clickPiece: function clickPiece(index) {
-            if (!this.game.gameEnded) {
-                if (this.game.playerTurn != this.ownPlayerNumber) {
-                    alert("It's not your turn to play");
-                } else {
-                    if (!this.game.board[index].flipped) {
-                        this.$emit("play", this.game, index);
-                    }
-                }
-            }
-        },
-        sendMessage: function sendMessage() {
-            var data = {
-                gameID: this.game.gameID,
-                playerName: this.ownPlayerName,
-                message: this.input
-            };
-            this.$emit("send-message", data);
-            this.input = "";
-        }
-    }
-});
-
-/***/ }),
-/* 259 */
+/* 265 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _c("div", { staticClass: "gameseparator" }, [
+  return _c("div", [
     _c("div", [
-      _c("h2", { staticClass: "text-center" }, [
+      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
         _vm._v("Game " + _vm._s(_vm.game.gameID))
       ]),
       _vm._v(" "),
       _c("br")
     ]),
     _vm._v(" "),
-    _c("div", { staticClass: "game-zone-content" }, [
-      _c("div", { staticClass: "container" }, [
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[3].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                      })
-                    })
-                  )
-                : _vm._e()
-            ]
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c("div", { staticClass: "col-md-1 col-md-offset-3" }, [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[0].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "oponentsHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-4" }, [
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c1") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c2") }
-                  })
-                ]
-              ),
-              _vm._v(" "),
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c3") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c4") }
-                  })
-                ]
-              )
-            ])
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-1" }, [
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
             _vm.game.gameStarted
               ? _c(
                   "div",
                   _vm._l(_vm.game.players[2].hand, function(card) {
                     return _c("img", {
-                      staticClass: "oponentsHand",
+                      staticClass: "teamMateHand",
                       attrs: { src: _vm.cardImageURL(card.imageToShow) }
                     })
                   })
                 )
               : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[0].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
           ])
         ]),
         _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[1].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.image) }
-                      })
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
                     })
-                  )
-                : _vm._e()
-            ]
-          )
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[1].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
         ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[3].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+            })
+          ]
+        )
       ])
     ]),
     _vm._v(" "),
@@ -98034,471 +97573,549 @@ if (false) {
 }
 
 /***/ }),
-/* 260 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(261);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(8)("f7093350", content, false);
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-6a68b469\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player3Board.vue", function() {
-     var newContent = require("!!../../../../../node_modules/css-loader/index.js!../../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-6a68b469\",\"scoped\":true,\"hasInlineConfig\":true}!../../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0&bustCache!./player3Board.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 261 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(7)(undefined);
-// imports
-
-
-// module
-exports.push([module.i, "\n.gameseparator[data-v-6a68b469] {\n    border-style: solid;\n    border-width: 2px 0 0 0;\n    border-color: black;\n}\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 262 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-/* harmony default export */ __webpack_exports__["default"] = ({
-    props: ['game'],
-    data: function data() {
-        return {
-            input: "",
-            messages: []
-        };
-    },
-    sockets: {
-        message_received: function message_received(data) {
-
-            if (this.game.gameID == data.gameID) {
-                var playerAndMessage = {
-                    playerName: data.playerName,
-                    message: data.message
-                };
-                this.messages.push(playerAndMessage);
-            }
-        }
-    },
-    computed: {
-        ownScore: function ownScore() {
-            switch (this.ownPlayerNumber) {
-                case 1:
-                    return this.game.players[0].score;
-                    break;
-                case 2:
-                    return this.game.players[1].score;
-                    break;
-                case 3:
-                    return this.game.players[2].score;
-                    break;
-                case 4:
-                    return this.game.players[3].score;
-                    break;
-                default:
-                    break;
-            }
-        },
-        disableForm: function disableForm() {
-            if (this.game.defaultSize || this.game.gameStarted) return true;else return false;
-        },
-        totTiles: function totTiles() {
-            return this.game.totCols * this.game.totLines;
-        },
-        isValidGame: function isValidGame() {
-            if (this.totTiles % 2 == 0 && this.totTiles <= 80) return true;else return false;
-        },
-        ownPlayerNumber: function ownPlayerNumber() {
-            if (this.game.player1SocketID == this.$parent.socketId) {
-                return 1;
-            } else if (this.game.player2SocketID == this.$parent.socketId) {
-                return 2;
-            } else if (this.game.player3SocketID == this.$parent.socketId) {
-                return 3;
-            } else if (this.game.player4SocketID == this.$parent.socketId) {
-                return 4;
-            }
-
-            return 0;
-        },
-        ownPlayerName: function ownPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (ownNumber == 1) return this.game.players[0].playerName;
-            if (ownNumber == 2) return this.game.players[1].playerName;
-            if (ownNumber == 3) return this.game.players[2].playerName;
-            if (ownNumber == 4) return this.game.players[3].playerName;
-
-            return "Unknown";
-        },
-        adversaryPlayerName: function adversaryPlayerName() {
-            var ownNumber = this.ownPlayerNumber;
-            if (this.game.playerTurn == 1) return this.game.players[0].playerName;
-            if (this.game.playerTurn == 2) return this.game.players[1].playerName;
-            if (this.game.playerTurn == 3) return this.game.players[2].playerName;
-            if (this.game.playerTurn == 4) return this.game.players[3].playerName;
-            return "Unknown";
-        },
-        message: function message() {
-            if (!this.game.gameStarted) {
-                return "Game has not started yet";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "Game has ended. You Win.";
-                }
-                return "Game has ended and " + this.adversaryPlayerName + " has won. You lost.";
-            } else {
-                if (this.game.playerTurn == this.ownPlayerNumber) {
-                    return "It's your turn";
-                } else {
-                    return "It's " + this.adversaryPlayerName + " turn";
-                }
-            }
-            return "Game is inconsistent";
-        },
-        alerttype: function alerttype() {
-            if (!this.game.gameStarted) {
-                return "alert-warning";
-            } else if (this.game.gameEnded) {
-                if (this.game.winner == this.ownPlayerNumber) {
-                    return "alert-success";
-                } else if (this.game.winner == 0) {
-                    return "alert-info";
-                }
-                return "alert-danger";
-            }
-            if (this.game.playerTurn == this.ownPlayerNumber) {
-                return "alert-success";
-            } else {
-                return "alert-info";
-            }
-        },
-
-        maxBoardWith: function maxBoardWith() {
-            return this.game.totCols * 50 + "px";
-        },
-        chatHeight: function chatHeight() {
-            return this.game.totLines * 50 + "px";
-        }
-    },
-    methods: {
-        cardImageURL: function cardImageURL(cardNumber) {
-            var imgSrc = String(cardNumber);
-            // console.log(cardNumber);
-            return 'img/' + imgSrc + '.png';
-        },
-        closeGame: function closeGame() {
-            this.$parent.close(this.game);
-        },
-        startgame: function startgame() {
-            this.$emit("start-game", this.game);
-        },
-        clickPiece: function clickPiece(index) {
-            if (!this.game.gameEnded) {
-                if (this.game.playerTurn != this.ownPlayerNumber) {
-                    alert("It's not your turn to play");
-                } else {
-                    if (!this.game.board[index].flipped) {
-                        this.$emit("play", this.game, index);
-                    }
-                }
-            }
-        },
-        sendMessage: function sendMessage() {
-            var data = {
-                gameID: this.game.gameID,
-                playerName: this.ownPlayerName,
-                message: this.input
-            };
-            this.$emit("send-message", data);
-            this.input = "";
-        }
-    }
-});
-
-/***/ }),
-/* 263 */
+/* 266 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _c("div", { staticClass: "gameseparator" }, [
+  return _c("div", [
     _c("div", [
-      _c("h2", { staticClass: "text-center" }, [
+      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
         _vm._v("Game " + _vm._s(_vm.game.gameID))
       ]),
       _vm._v(" "),
       _c("br")
     ]),
     _vm._v(" "),
-    _c("div", { staticClass: "game-zone-content" }, [
-      _c("div", { staticClass: "container" }, [
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[1].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                      })
-                    })
-                  )
-                : _vm._e()
-            ]
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c("div", { staticClass: "col-md-1 col-md-offset-3" }, [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[3].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "oponentsHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-4" }, [
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c1") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c2") }
-                  })
-                ]
-              ),
-              _vm._v(" "),
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-6",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c3") }
-                  })
-                ]
-              )
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                {
-                  staticClass: "col-md-12",
-                  staticStyle: { "text-align": "center" }
-                },
-                [
-                  _c("img", {
-                    staticClass: "playedCard",
-                    attrs: { src: _vm.cardImageURL("c4") }
-                  })
-                ]
-              )
-            ])
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "col-md-1" }, [
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
             _vm.game.gameStarted
               ? _c(
                   "div",
                   _vm._l(_vm.game.players[0].hand, function(card) {
                     return _c("img", {
-                      staticClass: "oponentsHand",
+                      staticClass: "teamMateHand",
                       attrs: { src: _vm.cardImageURL(card.imageToShow) }
                     })
                   })
                 )
               : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[3].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
           ])
         ]),
         _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c(
-            "div",
-            {
-              staticClass: "col-md-12",
-              staticStyle: { "text-align": "center" }
-            },
-            [
-              _vm.game.gameStarted
-                ? _c(
-                    "div",
-                    _vm._l(_vm.game.players[2].hand, function(card) {
-                      return _c("img", {
-                        staticClass: "myHand",
-                        attrs: { src: _vm.cardImageURL(card.image) }
-                      })
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
                     })
-                  )
-                : _vm._e()
-            ]
-          )
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[2].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
         ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[1].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+            })
+          ]
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr")
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-761f434a", module.exports)
+  }
+}
+
+/***/ }),
+/* 267 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", [
+      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
+        _vm._v("Game " + _vm._s(_vm.game.gameID))
+      ]),
+      _vm._v(" "),
+      _c("br")
+    ]),
+    _vm._v(" "),
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[3].hand, function(card) {
+                    return _c("img", {
+                      staticClass: "teamMateHand",
+                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[1].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[0].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[2].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+            })
+          ]
+        )
       ])
     ]),
     _vm._v(" "),

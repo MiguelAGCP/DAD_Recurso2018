@@ -24,7 +24,7 @@ io.on('connection', function (socket) {
 	console.log('client has connected');
 
 	socket.on('create_game', function (data) {
-		let game = games.createGame(data.playerID, data.playerName, socket.id);
+		let game = games.createGame(data.playerID, data.playerName, socket.id, data.avatar);
 		socket.join(game.gameID);
 		// Notifications to the client
 		socket.emit('my_active_games_changed');
@@ -38,7 +38,7 @@ io.on('connection', function (socket) {
 	});
 
 	socket.on('join_game', function (data) {
-		let game = games.joinGame(data.gameID, data.playerID, data.playerName, socket.id);
+		let game = games.joinGame(data.gameID, data.playerID, data.playerName, socket.id, data.avatar);
 		socket.join(game.gameID);
 		io.to(game.gameID).emit('my_active_games_changed');
 		io.emit('lobby_changed');
@@ -53,36 +53,14 @@ io.on('connection', function (socket) {
 		//console.log("A player has made a moove");
 		let game = games.gameByID(data.gameID);
 		//console.log(game);
-		if (game === null) {
-			socket.emit('invalid_play', {
-				'type': 'Invalid_Game',
-				'game': null
-			});
-			return;
-		}
-		var numPlayer = 0;
-		if (game.player1SocketID == socket.id) {
-			numPlayer = 1;
-		} else if (game.player2SocketID == socket.id) {
-			numPlayer = 2;
-		} else if (game.player3SocketID == socket.id) {
-			numPlayer = 3;
-		} else if (game.player4SocketID == socket.id) {
-			numPlayer = 4;
-		}
-		if (numPlayer === 0) {
-			socket.emit('invalid_play', {
-				'type': 'Invalid_Player',
-				'game': game
-			});
-			return;
-		}
+		
+		
 		//console.log("Player number: " + numPlayer + "has made a moove!");
 				
-		if (game.play(numPlayer, data.index)) {			
+		if (game.play(data.playerNumber, data.index)) {			
 			io.to(game.gameID).emit('game_changed', game);
-			game.doMatch();
-			io.to(game.gameID).emit('game_changed', game);			
+			
+			/* io.to(game.gameID).emit('game_changed', game); */			
 		} else {
 			socket.emit('invalid_play', {
 				'type': 'Invalid_Play',

@@ -208,6 +208,7 @@ export default {
          
               this.$store.commit('setNickname', response.data[0].nickname);
               this.$store.commit('setID', response.data[0].id);
+              this.$store.commit('setAvatar', response.data[0].avatar);
 
 
 

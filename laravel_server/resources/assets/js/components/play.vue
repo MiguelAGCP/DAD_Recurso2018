@@ -92,7 +92,9 @@
                 }
                 for (var activeGame of this.activeGames) {
                     if (game.gameID == activeGame.gameID) {
+                        
                         Object.assign(activeGame, game);
+                        console.table(game.players[0].cardTable);
                         if (activeGame.gameEnded) {
                             alert("Game " + activeGame.gameID + " has Ended \n The winner is: " +
                                 activeGame.players[activeGame.winner - 1].playerName);
@@ -118,7 +120,8 @@
                 } else {
                     this.$socket.emit('create_game', {
                         playerName: this.currentPlayer,
-                        playerID: this.$store.getters.getID
+                        playerID: this.$store.getters.getID,
+                        avatar: this.$store.getters.getAvatar
                     });
                 }
             },
@@ -132,7 +135,8 @@
                 this.$socket.emit('join_game', {
                     gameID: game.gameID,
                     playerID: this.$store.getters.getID,
-                    playerName: this.currentPlayer
+                    playerName: this.currentPlayer,
+                    avatar: this.$store.getters.getAvatar
                 });
             },
             play(game, index) {

@@ -4,7 +4,7 @@ var Deck = require('card-deck');
 
 
 class SuecaGame {
-    constructor(ID, playerID, player1Name, socketID) {
+    constructor(ID, playerID, player1Name, socketID, playerAvatar) {
         this.gameID = ID;
         this.gameEnded = false;
         this.gameStarted = false;
@@ -68,13 +68,15 @@ class SuecaGame {
             name: player1Name,
             score: 0,
             team: 1,
-            hand: []
+            hand: [],
+            cardTable: undefined,
+            avatar: playerAvatar
 
         }
         this.playerCount = this.players.push(player);
         }
 
-        join(playerID, playerName, socketID) {
+        join(playerID, playerName, socketID, playerAvatar) {
 
             if (this.playerCount < 4) {
                 let teamNumber = undefined;
@@ -89,7 +91,9 @@ class SuecaGame {
                     name: playerName,
                     score: 0,
                     team: teamNumber,
-                    hand: []
+                    hand: [],
+                    cardTable: undefined,
+                    avatar: playerAvatar
                 }
                 this.playerCount = this.players.push(player);
             }
@@ -100,28 +104,41 @@ class SuecaGame {
             for (let i = 0; i < 40; i++) {
                 shuffle(this.deck);
             }
-            this.nextPlayer = Math.floor(Math.random() * 4) - 1
-            this.gameStarted = true;
+            this.deck[0].imageToShow = this.deck[0].image;
+           //this.nextPlayer = Math.floor(Math.random() * 4) - 1;
+            
             //console.log("GAME STARTED");
             //console.log("First Player: " +this.nextPlayer);
             //console.log("Deck: " + JSON.stringify(this.deck));
+            let firstPlayerToReceiveCards = Math.floor(Math.random() * 4);
+            if (firstPlayerToReceiveCards == 3){
+                this.nextPlayer=0;
+            }
+            else{
+                this.nextPlayer = firstPlayerToReceiveCards + 1;
+            }
 
-            this.drawCards();
+            let drawCardsTo = firstPlayerToReceiveCards;
+            
+            for(let i = 0; i<4; i++){
+               this.drawCards(drawCardsTo);
+                if(drawCardsTo == 3){
+                    drawCardsTo = 0;
+                }
+                else{
+                    drawCardsTo++;
+                }
+            }
+            //this.deck = undefined;
             this.gameStarted = true;
         }
 
-        drawCards() {
-            this.deck[0].imageToShow = this.deck[0].image;
-            for (let i = 0, j = 10, k = 20, l = 30; i < 10, j < 20, k < 30, l < 40; i++, j++, k++, l++) {
-                this.players[0].hand.push(this.deck[i]);
-                delete this.deck[i];
-                this.players[1].hand.push(this.deck[j]);
-                delete this.deck[j];
-                this.players[2].hand.push(this.deck[k]);
-                delete this.deck[k];
-                this.players[3].hand.push(this.deck[l]);
-                delete this.deck[l];
+        drawCards(drawCardsTo) {   
+            //console.log(drawCardsTo);         
+            for (let i = 0; i < 10; i++) {
+                this.players[drawCardsTo].hand.push(this.deck[i]);                
             }
+            this.deck.splice(0, 10);
 
             //console.log("Deck: " + JSON.stringify(this.deck));
 
@@ -130,6 +147,14 @@ class SuecaGame {
 
         play(playerNumber, index) {
 
+            console.log("PlayerNumber " + playerNumber);
+            console.log("CARD INDEX " + index);
+            let playerIndex = playerNumber-1;
+            this.players[playerIndex].cardTable = this.players[playerIndex].hand[index];
+
+            console.log(this.players[playerIndex].cardTable);
+
+            return true;
         }
 
 

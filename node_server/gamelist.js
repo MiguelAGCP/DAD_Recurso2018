@@ -13,20 +13,20 @@ class GameList {
     	return game;
     }
 
-    createGame(playerID, playerName, socketID) {
+    createGame(playerID, playerName, socketID, avatar) {
     	this.contadorID = this.contadorID+1;
-    	var game = new SuecaGame(this.contadorID, playerID, playerName, socketID);
+    	var game = new SuecaGame(this.contadorID, playerID, playerName, socketID, avatar);
     	//game.player1SocketID = socketID;
     	this.games.set(game.gameID, game);
     	return game;
     }
 
-    joinGame(gameID, playerID, playerName, socketID) {
+    joinGame(gameID, playerID, playerName, socketID, avatar) {
     	let game = this.gameByID(gameID);
     	if (game===null) {
     		return null;
 		}
-		game.join(playerID, playerName, socketID);
+		game.join(playerID, playerName, socketID, avatar);
     	return game;
 	}
 	startGame(gameID){
