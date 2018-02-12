@@ -1,7 +1,10 @@
 <template>
 <div>
 		<div class="container">
-    	<div class="row">
+            <div class="row">
+             <div class="col-md-12" align="middle"><img src="img/banner_1.png" width="60%" height="60%" ></div>
+    	    </div>
+        <div class="row">
         <div class="col-md-8 col-md-offset-2">
             <div class="panel panel-default">
                 <div class="panel-heading">Login</div>
@@ -45,9 +48,9 @@
                                     Login
                                 </button>
 
-                                <button type="submit" class="btn btn-primary" v-on:click.prevent="registerUser">
-                                    Register
-                                </button>
+                                
+                                <router-link class="btn btn-primary" to="/register">Register</router-link>
+                              
 
                                 <a class="btn btn-link" href="">
                                     Forgot Your Password?
@@ -61,64 +64,7 @@
     	</div><!--"row"-->
 		</div><!--container-->
 
-    	<div   class="container" v-if="register">    
-
-        <div class="row">
-        <div class="col-md-8 col-md-offset-2">
-            <div class="panel panel-default">
-                <div class="panel-heading">Register</div>
-
-                <div class="panel-body">
-                <!-- <form class="form-horizontal" method="POST" action="{{ route('login') }}"> -->
-                    <form class="form-horizontal">
-                        
-
-                        <div class="form-group">
-                            <label for="email" class="col-md-4 control-label">E-Mail Address</label>
-
-                            <div class="col-md-6">
-                                <input input id="userLogin" v-model="login" class="form-control" name="login" value="" required autofocus>
-
-                              
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="password" class="col-md-4 control-label" >Password</label>
-
-                            <div class="col-md-6">
-                                <input id="userPass" v-model="password" type="password" class="form-control" name="password" required>
-
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="col-md-6 col-md-offset-4">
-                                <div class="checkbox">
-                                    <label>
-                                        <input type="checkbox" name="remember" > Remember Me
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="col-md-8 col-md-offset-4">
-                                <button type="submit" class="btn btn-primary" v-on:click.prevent="loginUser">
-                                    Login
-                                </button>
-
-                                <a class="btn btn-link" href="">
-                                    Forgot Your Password?
-                                </a>
-                            </div>
-                        </div>
-                    </form>
-                    </div><!--"panel-body"-->
-            </div><!--"panel-default"-->
-        </div><!--"col-md-8 c"-->
-    	</div><!--"row"-->
-		</div><!--container-->
+    
 </div>
 </template>
 
@@ -137,20 +83,12 @@ var router = new VueRouter();
 export default {
   data: function() {
     return {
-      register: false,
       login: undefined,
       password: undefined,
       logType: null,
     };
   },
   methods: {
-
-     registerUser: function() {
-
-         if(!this.register) this.register = true;
-         else this.register =false;
-     },
-
 
     ValidateEmail(login) 
 {
@@ -171,9 +109,6 @@ export default {
           var refreshToken = response.data.refresh_token;
          
          // store tockens vuex
-        this.$store.state.user.headers.Authorization = 'Bearer ' + window.localStorage.getItem("authToken");
-        this.$store.state.user.refresh = window.localStorage.getItem("resfreshToken");
-
        this.$store.commit('setAuthToken', token);
        this.$store.commit('setHeaders', token);
        this.$store.commit('setRefreshToken', refreshToken);
@@ -226,8 +161,14 @@ export default {
   },
   
   components: {},
-  mounted() {}
-  }
-</script>
+  mounted() {},
 
+     beforeCreate(){
+            document.body.className = 'login';
+        }
+  }
+
+</script>
+<style>
+</style>
 

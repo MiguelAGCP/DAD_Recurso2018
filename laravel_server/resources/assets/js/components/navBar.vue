@@ -2,30 +2,25 @@
     <div class="container navbar navbar-toggleable-md navbar-light bg-faded">
         <div class="row">
 
-            <div class="col-md-11"> 
-            <el-tabs name="navBarMenu">
-    		    <el-tab-pane v-if="$store.state.user.admin" label="Dashboard" name="dashboard">
-                    <router-link to="/dash">Dashboard</router-link>
-			    </el-tab-pane>
-			    <el-tab-pane label="Game" name="game">
-                    <router-link to="/play">Play Game</router-link>
-			    </el-tab-pane>
-                <el-tab-pane label="Statistics" name="statistics">
-                    <router-link to="/statistics">Global Stats </router-link>
-                    - 
-                    <router-link to="/statistics"> My Stats</router-link>
-			    </el-tab-pane>
-	 		</el-tabs>
+            <div class="col-md-10"> 
+                        <el-menu :default-active="activeIndex2" class="el-menu-demo" mode="horizontal" @select="handleSelect" background-color="#545c64" text-color="#fff" active-text-color="#ffd04b">
+                            <el-menu-item index="1"><router-link to="/dash">Dashboard</router-link></el-menu-item>
+                            <el-menu-item index="2"><router-link to="/play">Game</router-link></el-menu-item>
+                            <el-menu-item index="3"><router-link to="/statistics">Statistics</router-link></el-menu-item>
+                        </el-menu>
             </div>
-          <div class="dropdown col-md-1" align="left">
-                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                {{$store.state.user.nickname}}
-                </button>
-                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                      <p class="dropdown-item" ><router-link to="/useraccount">  My Account</router-link></p>
-                      <p class="dropdown-item" v-on:click.prevent="logout()"><router-link to="/index">  Logout</router-link></p>                  
-                </div>
-                
+
+
+
+          <div class="dropdown col-md-1" align="left" style="z-index:5">
+              <el-menu :default-active="activeIndex1" class="el-menu-demo" mode="horizontal" @select="handleSelect" background-color="#545c64" text-color="#fff" active-text-color="#ffd04b">
+             <el-submenu index="4">
+                    <template slot="title">{{$store.state.user.nickname}}</template>
+                    <el-menu-item index="3-1"><router-link to="/useraccount">  My Account</router-link></el-menu-item>
+                    <el-menu-item index="3-2" v-on:click.prevent="logout()">Logout</el-menu-item>
+            </el-submenu>
+            </el-menu>
+            
           </div>
 
 
@@ -41,10 +36,19 @@
     
     export default {
 
-
+ data() {
+      return {
+        activeIndex: '1',
+        activeIndex2: '1'
+      };
      
-    
+ },
      methods: {
+
+
+         handleSelect: function(key, keyPath) {
+        console.log(key, keyPath);
+      },
 
             logout: function(){
 

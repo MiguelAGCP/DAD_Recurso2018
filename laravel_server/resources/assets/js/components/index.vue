@@ -9,11 +9,11 @@
 
             <div class="content">
                 <div class="title m-b-md">
-                    Sueca Game
+                    <p color="whie">Sueca Game</p>
                 </div>
 
                 <div >
-                    <p>Miguel Pires 2120664 / Ruben Miguel 21230664 / Paulo Penicheiro 2130628</p>
+                    <p color="white" >Miguel Pires 2120664 / Ruben Miguel 21230664 / Paulo Penicheiro 2130628</p>
                   
                 </div>
                     <p>  <button type="submit" class="btn btn-primary" v-on:click.prevent="loginUser">
@@ -40,7 +40,11 @@ export default {
 
         this.$router.push("/login");
     }
- }
+ },
+
+     beforeCreate(){
+            document.body.className = 'index';
+        }
 }
 </script>
 
@@ -95,5 +99,4 @@ export default {
             .m-b-md {
                 margin-bottom: 30px;
             }
-            
-</style>        
+</style>

@@ -4,7 +4,6 @@
 		<div class="jumbotron">
 			<h1>{{ title }}</h1>
 		</div>
-		<nav-dash></nav-dash>
 		<user-list v-if="currentUser==null" :users="users" @edit-click="editUser" @delete-click="deleteUser" @message="childMessage" ref="usersListRef"></user-list>
 
 		<div class="alert alert-success" v-if="showSuccess">
@@ -20,7 +19,6 @@
 	import UserList from './userList.vue';
 	import UserEdit from './userEdit.vue';
 	import NavBar from './navBar.vue';
-	import NavBarDash from './navBarDash.vue';
 
 	export default {
 		data: function () {
@@ -77,12 +75,15 @@
 			'user-list': UserList,
 			'user-edit': UserEdit,
 			'nav-bar': NavBar,
-			'nav-dash': NavBarDash,
+
 		},
 		mounted() {
 			this.getUsers();
 
-		}
+		},
+		 beforeCreate(){
+            document.body.className = 'dash';
+        }
 
 	}
 </script>

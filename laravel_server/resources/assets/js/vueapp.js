@@ -31,7 +31,8 @@ const sueca_game = Vue.component('play', require('./components/play.vue'));
 const login = Vue.component('login', require('./components/login.vue'));
 const index = Vue.component('index', require('./components/index.vue'));
 const statistics = Vue.component('statistics', require('./components/statistics.vue'));
-const useraccount = Vue.component('useraccount', require('./components/useraccount.vue'));
+const useraccount = Vue.component('useraccount', require('./components/userAccount.vue'));
+const register = Vue.component('register', require('./components/register.vue'));
 
 
 const routes = [{
@@ -56,8 +57,9 @@ const routes = [{
   },
   { path: '/statistics',
     component: statistics},
-  { path: '/useraccount',
-    component: useraccount},
+  { 
+    path: '/register',
+    component: register},
 ];
 
 

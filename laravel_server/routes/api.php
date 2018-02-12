@@ -15,7 +15,11 @@ use Illuminate\Contracts\Support\Jsonable;
 */
 
 Route::post('login', 'LoginControllerAPI@login');
-Route::post('loginnick', 'LoginControllerAPI@loginNick');
+
+Route::post('login', 'LoginControllerAPI@login');
+
+Route::post('storeuser', 'UserControllerAPI@store');
+
 
 Route::post('logout', 'LoginControllerAPI@logout');
 Route::get('users/getuserbymail/{email}', 'UserControllerAPI@getUserByMail')->middleware('auth:api');

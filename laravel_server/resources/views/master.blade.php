@@ -19,3 +19,19 @@
      @yield('pagescript')        
     </body>
 </html>
+
+
+<style>
+body.login {
+    background-image: url("https://images4.alphacoders.com/155/155784.jpg");
+}
+body.index {
+    background-image: url("https://images4.alphacoders.com/155/155784.jpg");
+}
+body.login {
+    background-image: url("https://images4.alphacoders.com/155/155784.jpg");
+}
+body.dash {
+    background-image: url("");
+}
+</style>

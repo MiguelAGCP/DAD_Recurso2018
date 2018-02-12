@@ -154,8 +154,6 @@
 </template>
 
 <script type="text/javascript">
-import UserList from "./userList.vue";
-import UserEdit from "./userEdit.vue";
 import NavBar from "./navBar.vue";
 
 export default {
@@ -272,7 +270,7 @@ export default {
 
 
 		changeMenuTab(tab, event){
-				if(tab.name=="userStats") this.refreshUserStats($store.state.user.nickname);
+				if(tab.name=="userStats") this.refreshUserStats(this.$store.state.user.id);
 
 
 		},

@@ -32,9 +32,12 @@ class UserControllerAPI extends Controller
     {
         $request->validate([
                 'name' => 'required',
+                'nickname' => 'required|unique:users,nickname',
                 'email' => 'required|email|unique:users,email',
                 'password' => 'min:3'
             ]);
+       
+
         $user = new User();
         $user->fill($request->all());
         $user->password = Hash::make($user->password);
