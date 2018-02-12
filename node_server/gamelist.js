@@ -26,8 +26,13 @@ class GameList {
     	if (game===null) {
     		return null;
 		}
-		game.join(playerID, playerName, socketID, avatar);
-    	return game;
+		if(game.join(playerID, playerName, socketID, avatar)){
+			return game;
+		}
+		else{
+			return false;
+		}
+    	
 	}
 	startGame(gameID){
 		let game = this.gameByID(gameID);

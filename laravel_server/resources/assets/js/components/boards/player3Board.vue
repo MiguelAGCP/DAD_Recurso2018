@@ -116,7 +116,6 @@
         },
 
         methods: {
-
             play(index) {
                 this.$emit('play', index);
             },
@@ -124,8 +123,8 @@
                 var imgSrc = String(cardNumber);
                 return 'img/' + imgSrc + '.png';
             },
-            avatarURL(avatar){
-                 return 'img/avatars' + avatar;
+            avatarURL(avatar) {
+                return 'img/avatars/' + avatar;
             }
         }
     }

@@ -26,7 +26,7 @@
                     <div class="container">
                         <div class="row">
                             <div class="col-md-12">
-                               <img :src="avatarURL(game.players[3].avatar)" class="img-circle avatarGame">
+                                <img :src="avatarURL(game.players[3].avatar)" class="img-circle avatarGame">
                             </div>
                         </div>
                         <div class="row">
@@ -116,7 +116,6 @@
         },
 
         methods: {
-
             play(index) {
                 this.$emit('play', index);
             },
@@ -124,8 +123,8 @@
                 var imgSrc = String(cardNumber);
                 return 'img/' + imgSrc + '.png';
             },
-            avatarURL(avatar){
-                 return 'img/avatars' + avatar;
+            avatarURL(avatar) {
+                return 'img/avatars/' + avatar;
             }
         }
     }

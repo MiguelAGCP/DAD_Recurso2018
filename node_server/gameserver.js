@@ -39,9 +39,12 @@ io.on('connection', function (socket) {
 
 	socket.on('join_game', function (data) {
 		let game = games.joinGame(data.gameID, data.playerID, data.playerName, socket.id, data.avatar);
-		socket.join(game.gameID);
-		io.to(game.gameID).emit('my_active_games_changed');
+		if (game){
+			socket.join(game.gameID);
+			io.to(game.gameID).emit('my_active_games_changed');
 		io.emit('lobby_changed');
+		}
+		
 	});
 
 	socket.on('remove_game', function (data) {
@@ -50,20 +53,13 @@ io.on('connection', function (socket) {
 	});
 
 	socket.on('play', function (data) {
-		//console.log("A player has made a moove");
-		let game = games.gameByID(data.gameID);
-		//console.log(game);
-		
-		
-		//console.log("Player number: " + numPlayer + "has made a moove!");
-				
-		if (game.play(data.playerNumber, data.index)) {			
-			io.to(game.gameID).emit('game_changed', game);
-			
-			/* io.to(game.gameID).emit('game_changed', game); */			
+		console.log("PlayerID on gameserver.js " + data.playerID);
+		let game = games.gameByID(data.gameID);				
+		if (game.play(data.playerID, data.index)) {			
+			io.to(game.gameID).emit('game_changed', game);			
 		} else {
 			socket.emit('invalid_play', {
-				'type': 'Invalid_Play',
+				'type': 'Wrong_Turn',
 				'game': game
 			});
 			return;

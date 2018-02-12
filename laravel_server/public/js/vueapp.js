@@ -716,309 +716,6 @@ module.exports = {
 
 /***/ }),
 /* 4 */
-/***/ (function(module, exports) {
-
-/*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
-*/
-// css base code, injected by the css-loader
-module.exports = function(useSourceMap) {
-	var list = [];
-
-	// return the list of modules as css string
-	list.toString = function toString() {
-		return this.map(function (item) {
-			var content = cssWithMappingToString(item, useSourceMap);
-			if(item[2]) {
-				return "@media " + item[2] + "{" + content + "}";
-			} else {
-				return content;
-			}
-		}).join("");
-	};
-
-	// import a list of modules into the list
-	list.i = function(modules, mediaQuery) {
-		if(typeof modules === "string")
-			modules = [[null, modules, ""]];
-		var alreadyImportedModules = {};
-		for(var i = 0; i < this.length; i++) {
-			var id = this[i][0];
-			if(typeof id === "number")
-				alreadyImportedModules[id] = true;
-		}
-		for(i = 0; i < modules.length; i++) {
-			var item = modules[i];
-			// skip already imported module
-			// this implementation is not 100% perfect for weird media query combinations
-			//  when a module is imported multiple times with different media queries.
-			//  I hope this will never occur (Hey this way we have smaller bundles)
-			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
-				if(mediaQuery && !item[2]) {
-					item[2] = mediaQuery;
-				} else if(mediaQuery) {
-					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
-				}
-				list.push(item);
-			}
-		}
-	};
-	return list;
-};
-
-function cssWithMappingToString(item, useSourceMap) {
-	var content = item[1] || '';
-	var cssMapping = item[3];
-	if (!cssMapping) {
-		return content;
-	}
-
-	if (useSourceMap && typeof btoa === 'function') {
-		var sourceMapping = toComment(cssMapping);
-		var sourceURLs = cssMapping.sources.map(function (source) {
-			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
-		});
-
-		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
-	}
-
-	return [content].join('\n');
-}
-
-// Adapted from convert-source-map (MIT)
-function toComment(sourceMap) {
-	// eslint-disable-next-line no-undef
-	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
-	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
-
-	return '/*# ' + data + ' */';
-}
-
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*
-  MIT License http://www.opensource.org/licenses/mit-license.php
-  Author Tobias Koppers @sokra
-  Modified by Evan You @yyx990803
-*/
-
-var hasDocument = typeof document !== 'undefined'
-
-if (typeof DEBUG !== 'undefined' && DEBUG) {
-  if (!hasDocument) {
-    throw new Error(
-    'vue-style-loader cannot be used in a non-browser environment. ' +
-    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
-  ) }
-}
-
-var listToStyles = __webpack_require__(191)
-
-/*
-type StyleObject = {
-  id: number;
-  parts: Array<StyleObjectPart>
-}
-
-type StyleObjectPart = {
-  css: string;
-  media: string;
-  sourceMap: ?string
-}
-*/
-
-var stylesInDom = {/*
-  [id: number]: {
-    id: number,
-    refs: number,
-    parts: Array<(obj?: StyleObjectPart) => void>
-  }
-*/}
-
-var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
-var singletonElement = null
-var singletonCounter = 0
-var isProduction = false
-var noop = function () {}
-
-// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
-// tags it will allow on a page
-var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
-
-module.exports = function (parentId, list, _isProduction) {
-  isProduction = _isProduction
-
-  var styles = listToStyles(parentId, list)
-  addStylesToDom(styles)
-
-  return function update (newList) {
-    var mayRemove = []
-    for (var i = 0; i < styles.length; i++) {
-      var item = styles[i]
-      var domStyle = stylesInDom[item.id]
-      domStyle.refs--
-      mayRemove.push(domStyle)
-    }
-    if (newList) {
-      styles = listToStyles(parentId, newList)
-      addStylesToDom(styles)
-    } else {
-      styles = []
-    }
-    for (var i = 0; i < mayRemove.length; i++) {
-      var domStyle = mayRemove[i]
-      if (domStyle.refs === 0) {
-        for (var j = 0; j < domStyle.parts.length; j++) {
-          domStyle.parts[j]()
-        }
-        delete stylesInDom[domStyle.id]
-      }
-    }
-  }
-}
-
-function addStylesToDom (styles /* Array<StyleObject> */) {
-  for (var i = 0; i < styles.length; i++) {
-    var item = styles[i]
-    var domStyle = stylesInDom[item.id]
-    if (domStyle) {
-      domStyle.refs++
-      for (var j = 0; j < domStyle.parts.length; j++) {
-        domStyle.parts[j](item.parts[j])
-      }
-      for (; j < item.parts.length; j++) {
-        domStyle.parts.push(addStyle(item.parts[j]))
-      }
-      if (domStyle.parts.length > item.parts.length) {
-        domStyle.parts.length = item.parts.length
-      }
-    } else {
-      var parts = []
-      for (var j = 0; j < item.parts.length; j++) {
-        parts.push(addStyle(item.parts[j]))
-      }
-      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
-    }
-  }
-}
-
-function createStyleElement () {
-  var styleElement = document.createElement('style')
-  styleElement.type = 'text/css'
-  head.appendChild(styleElement)
-  return styleElement
-}
-
-function addStyle (obj /* StyleObjectPart */) {
-  var update, remove
-  var styleElement = document.querySelector('style[data-vue-ssr-id~="' + obj.id + '"]')
-
-  if (styleElement) {
-    if (isProduction) {
-      // has SSR styles and in production mode.
-      // simply do nothing.
-      return noop
-    } else {
-      // has SSR styles but in dev mode.
-      // for some reason Chrome can't handle source map in server-rendered
-      // style tags - source maps in <style> only works if the style tag is
-      // created and inserted dynamically. So we remove the server rendered
-      // styles and inject new ones.
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  if (isOldIE) {
-    // use singleton mode for IE9.
-    var styleIndex = singletonCounter++
-    styleElement = singletonElement || (singletonElement = createStyleElement())
-    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
-    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
-  } else {
-    // use multi-style-tag mode in all other cases
-    styleElement = createStyleElement()
-    update = applyToTag.bind(null, styleElement)
-    remove = function () {
-      styleElement.parentNode.removeChild(styleElement)
-    }
-  }
-
-  update(obj)
-
-  return function updateStyle (newObj /* StyleObjectPart */) {
-    if (newObj) {
-      if (newObj.css === obj.css &&
-          newObj.media === obj.media &&
-          newObj.sourceMap === obj.sourceMap) {
-        return
-      }
-      update(obj = newObj)
-    } else {
-      remove()
-    }
-  }
-}
-
-var replaceText = (function () {
-  var textStore = []
-
-  return function (index, replacement) {
-    textStore[index] = replacement
-    return textStore.filter(Boolean).join('\n')
-  }
-})()
-
-function applyToSingletonTag (styleElement, index, remove, obj) {
-  var css = remove ? '' : obj.css
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = replaceText(index, css)
-  } else {
-    var cssNode = document.createTextNode(css)
-    var childNodes = styleElement.childNodes
-    if (childNodes[index]) styleElement.removeChild(childNodes[index])
-    if (childNodes.length) {
-      styleElement.insertBefore(cssNode, childNodes[index])
-    } else {
-      styleElement.appendChild(cssNode)
-    }
-  }
-}
-
-function applyToTag (styleElement, obj) {
-  var css = obj.css
-  var media = obj.media
-  var sourceMap = obj.sourceMap
-
-  if (media) {
-    styleElement.setAttribute('media', media)
-  }
-
-  if (sourceMap) {
-    // https://developer.chrome.com/devtools/docs/javascript-debugging
-    // this makes source maps inside style tags work properly in Chrome
-    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
-    // http://stackoverflow.com/a/26603875
-    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
-  }
-
-  if (styleElement.styleSheet) {
-    styleElement.styleSheet.cssText = css
-  } else {
-    while (styleElement.firstChild) {
-      styleElement.removeChild(styleElement.firstChild)
-    }
-    styleElement.appendChild(document.createTextNode(css))
-  }
-}
-
-
-/***/ }),
-/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11587,7 +11284,7 @@ module.exports = Vue$3;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(19), __webpack_require__(108).setImmediate))
 
 /***/ }),
-/* 7 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11603,7 +11300,7 @@ exports.addClass = addClass;
 exports.removeClass = removeClass;
 exports.setStyle = setStyle;
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -11781,7 +11478,7 @@ function setStyle(element, styleName, value) {
 };
 
 /***/ }),
-/* 8 */
+/* 6 */
 /***/ (function(module, exports) {
 
 // https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
@@ -11790,6 +11487,309 @@ var global = module.exports = typeof window != 'undefined' && window.Math == Mat
   // eslint-disable-next-line no-new-func
   : Function('return this')();
 if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports) {
+
+/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+// css base code, injected by the css-loader
+module.exports = function(useSourceMap) {
+	var list = [];
+
+	// return the list of modules as css string
+	list.toString = function toString() {
+		return this.map(function (item) {
+			var content = cssWithMappingToString(item, useSourceMap);
+			if(item[2]) {
+				return "@media " + item[2] + "{" + content + "}";
+			} else {
+				return content;
+			}
+		}).join("");
+	};
+
+	// import a list of modules into the list
+	list.i = function(modules, mediaQuery) {
+		if(typeof modules === "string")
+			modules = [[null, modules, ""]];
+		var alreadyImportedModules = {};
+		for(var i = 0; i < this.length; i++) {
+			var id = this[i][0];
+			if(typeof id === "number")
+				alreadyImportedModules[id] = true;
+		}
+		for(i = 0; i < modules.length; i++) {
+			var item = modules[i];
+			// skip already imported module
+			// this implementation is not 100% perfect for weird media query combinations
+			//  when a module is imported multiple times with different media queries.
+			//  I hope this will never occur (Hey this way we have smaller bundles)
+			if(typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
+				if(mediaQuery && !item[2]) {
+					item[2] = mediaQuery;
+				} else if(mediaQuery) {
+					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
+				}
+				list.push(item);
+			}
+		}
+	};
+	return list;
+};
+
+function cssWithMappingToString(item, useSourceMap) {
+	var content = item[1] || '';
+	var cssMapping = item[3];
+	if (!cssMapping) {
+		return content;
+	}
+
+	if (useSourceMap && typeof btoa === 'function') {
+		var sourceMapping = toComment(cssMapping);
+		var sourceURLs = cssMapping.sources.map(function (source) {
+			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */'
+		});
+
+		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
+	}
+
+	return [content].join('\n');
+}
+
+// Adapted from convert-source-map (MIT)
+function toComment(sourceMap) {
+	// eslint-disable-next-line no-undef
+	var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap))));
+	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
+
+	return '/*# ' + data + ' */';
+}
+
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
+  Modified by Evan You @yyx990803
+*/
+
+var hasDocument = typeof document !== 'undefined'
+
+if (typeof DEBUG !== 'undefined' && DEBUG) {
+  if (!hasDocument) {
+    throw new Error(
+    'vue-style-loader cannot be used in a non-browser environment. ' +
+    "Use { target: 'node' } in your Webpack config to indicate a server-rendering environment."
+  ) }
+}
+
+var listToStyles = __webpack_require__(191)
+
+/*
+type StyleObject = {
+  id: number;
+  parts: Array<StyleObjectPart>
+}
+
+type StyleObjectPart = {
+  css: string;
+  media: string;
+  sourceMap: ?string
+}
+*/
+
+var stylesInDom = {/*
+  [id: number]: {
+    id: number,
+    refs: number,
+    parts: Array<(obj?: StyleObjectPart) => void>
+  }
+*/}
+
+var head = hasDocument && (document.head || document.getElementsByTagName('head')[0])
+var singletonElement = null
+var singletonCounter = 0
+var isProduction = false
+var noop = function () {}
+
+// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
+// tags it will allow on a page
+var isOldIE = typeof navigator !== 'undefined' && /msie [6-9]\b/.test(navigator.userAgent.toLowerCase())
+
+module.exports = function (parentId, list, _isProduction) {
+  isProduction = _isProduction
+
+  var styles = listToStyles(parentId, list)
+  addStylesToDom(styles)
+
+  return function update (newList) {
+    var mayRemove = []
+    for (var i = 0; i < styles.length; i++) {
+      var item = styles[i]
+      var domStyle = stylesInDom[item.id]
+      domStyle.refs--
+      mayRemove.push(domStyle)
+    }
+    if (newList) {
+      styles = listToStyles(parentId, newList)
+      addStylesToDom(styles)
+    } else {
+      styles = []
+    }
+    for (var i = 0; i < mayRemove.length; i++) {
+      var domStyle = mayRemove[i]
+      if (domStyle.refs === 0) {
+        for (var j = 0; j < domStyle.parts.length; j++) {
+          domStyle.parts[j]()
+        }
+        delete stylesInDom[domStyle.id]
+      }
+    }
+  }
+}
+
+function addStylesToDom (styles /* Array<StyleObject> */) {
+  for (var i = 0; i < styles.length; i++) {
+    var item = styles[i]
+    var domStyle = stylesInDom[item.id]
+    if (domStyle) {
+      domStyle.refs++
+      for (var j = 0; j < domStyle.parts.length; j++) {
+        domStyle.parts[j](item.parts[j])
+      }
+      for (; j < item.parts.length; j++) {
+        domStyle.parts.push(addStyle(item.parts[j]))
+      }
+      if (domStyle.parts.length > item.parts.length) {
+        domStyle.parts.length = item.parts.length
+      }
+    } else {
+      var parts = []
+      for (var j = 0; j < item.parts.length; j++) {
+        parts.push(addStyle(item.parts[j]))
+      }
+      stylesInDom[item.id] = { id: item.id, refs: 1, parts: parts }
+    }
+  }
+}
+
+function createStyleElement () {
+  var styleElement = document.createElement('style')
+  styleElement.type = 'text/css'
+  head.appendChild(styleElement)
+  return styleElement
+}
+
+function addStyle (obj /* StyleObjectPart */) {
+  var update, remove
+  var styleElement = document.querySelector('style[data-vue-ssr-id~="' + obj.id + '"]')
+
+  if (styleElement) {
+    if (isProduction) {
+      // has SSR styles and in production mode.
+      // simply do nothing.
+      return noop
+    } else {
+      // has SSR styles but in dev mode.
+      // for some reason Chrome can't handle source map in server-rendered
+      // style tags - source maps in <style> only works if the style tag is
+      // created and inserted dynamically. So we remove the server rendered
+      // styles and inject new ones.
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  if (isOldIE) {
+    // use singleton mode for IE9.
+    var styleIndex = singletonCounter++
+    styleElement = singletonElement || (singletonElement = createStyleElement())
+    update = applyToSingletonTag.bind(null, styleElement, styleIndex, false)
+    remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true)
+  } else {
+    // use multi-style-tag mode in all other cases
+    styleElement = createStyleElement()
+    update = applyToTag.bind(null, styleElement)
+    remove = function () {
+      styleElement.parentNode.removeChild(styleElement)
+    }
+  }
+
+  update(obj)
+
+  return function updateStyle (newObj /* StyleObjectPart */) {
+    if (newObj) {
+      if (newObj.css === obj.css &&
+          newObj.media === obj.media &&
+          newObj.sourceMap === obj.sourceMap) {
+        return
+      }
+      update(obj = newObj)
+    } else {
+      remove()
+    }
+  }
+}
+
+var replaceText = (function () {
+  var textStore = []
+
+  return function (index, replacement) {
+    textStore[index] = replacement
+    return textStore.filter(Boolean).join('\n')
+  }
+})()
+
+function applyToSingletonTag (styleElement, index, remove, obj) {
+  var css = remove ? '' : obj.css
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = replaceText(index, css)
+  } else {
+    var cssNode = document.createTextNode(css)
+    var childNodes = styleElement.childNodes
+    if (childNodes[index]) styleElement.removeChild(childNodes[index])
+    if (childNodes.length) {
+      styleElement.insertBefore(cssNode, childNodes[index])
+    } else {
+      styleElement.appendChild(cssNode)
+    }
+  }
+}
+
+function applyToTag (styleElement, obj) {
+  var css = obj.css
+  var media = obj.media
+  var sourceMap = obj.sourceMap
+
+  if (media) {
+    styleElement.setAttribute('media', media)
+  }
+
+  if (sourceMap) {
+    // https://developer.chrome.com/devtools/docs/javascript-debugging
+    // this makes source maps inside style tags work properly in Chrome
+    css += '\n/*# sourceURL=' + sourceMap.sources[0] + ' */'
+    // http://stackoverflow.com/a/26603875
+    css += '\n/*# sourceMappingURL=data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + ' */'
+  }
+
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = css
+  } else {
+    while (styleElement.firstChild) {
+      styleElement.removeChild(styleElement.firstChild)
+    }
+    styleElement.appendChild(document.createTextNode(css))
+  }
+}
 
 
 /***/ }),
@@ -12005,7 +12005,7 @@ module.exports = function (it) {
 
 var store = __webpack_require__(42)('wks');
 var uid = __webpack_require__(26);
-var Symbol = __webpack_require__(8).Symbol;
+var Symbol = __webpack_require__(6).Symbol;
 var USE_SYMBOL = typeof Symbol == 'function';
 
 var $exports = module.exports = function (name) {
@@ -14927,7 +14927,7 @@ var _zhCN = __webpack_require__(114);
 
 var _zhCN2 = _interopRequireDefault(_zhCN);
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -15720,7 +15720,7 @@ exports.default = function (target) {
 
 exports.__esModule = true;
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -15936,7 +15936,7 @@ exports.default = function () {
   return scrollBarWidth;
 };
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -16167,7 +16167,7 @@ var removeResizeListener = exports.removeResizeListener = function removeResizeL
 /* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(8);
+var global = __webpack_require__(6);
 var core = __webpack_require__(21);
 var ctx = __webpack_require__(136);
 var hide = __webpack_require__(12);
@@ -16286,7 +16286,7 @@ module.exports = function (key) {
 /* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(8);
+var global = __webpack_require__(6);
 var SHARED = '__core-js_shared__';
 var store = global[SHARED] || (global[SHARED] = {});
 module.exports = function (key) {
@@ -16349,7 +16349,7 @@ exports.f = __webpack_require__(16);
 /* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var global = __webpack_require__(8);
+var global = __webpack_require__(6);
 var core = __webpack_require__(21);
 var LIBRARY = __webpack_require__(45);
 var wksExt = __webpack_require__(48);
@@ -18046,7 +18046,7 @@ exports.default = {
 exports.__esModule = true;
 exports.PopupManager = undefined;
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -18062,7 +18062,7 @@ var _scrollbarWidth = __webpack_require__(34);
 
 var _scrollbarWidth2 = _interopRequireDefault(_scrollbarWidth);
 
-var _dom = __webpack_require__(7);
+var _dom = __webpack_require__(5);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -18439,11 +18439,11 @@ module.exports = function ( delay, noTrailing, callback, debounceMode ) {
 
 exports.__esModule = true;
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
-var _dom = __webpack_require__(7);
+var _dom = __webpack_require__(5);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -18597,7 +18597,7 @@ module.exports = __webpack_require__(36);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(7);
+module.exports = __webpack_require__(5);
 
 /***/ }),
 
@@ -19320,7 +19320,7 @@ var esExports = { render: render, staticRenderFns: staticRenderFns }
 exports.__esModule = true;
 exports.default = scrollIntoView;
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
@@ -19389,7 +19389,7 @@ module.exports = !__webpack_require__(14) && !__webpack_require__(18)(function (
 /***/ (function(module, exports, __webpack_require__) {
 
 var isObject = __webpack_require__(23);
-var document = __webpack_require__(8).document;
+var document = __webpack_require__(6).document;
 // typeof document.createElement is 'object' in old IE
 var is = isObject(document) && isObject(document.createElement);
 module.exports = function (it) {
@@ -19630,7 +19630,7 @@ function required(rule, value, source, errors, options, type) {
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(83);
-module.exports = __webpack_require__(255);
+module.exports = __webpack_require__(247);
 
 
 /***/ }),
@@ -19659,7 +19659,7 @@ var _extends = Object.assign || function (target) { for (var i = 1; i < argument
 
 __webpack_require__(84);
 
-window.Vue = __webpack_require__(6);
+window.Vue = __webpack_require__(4);
 
 //import shuffle from 'shuffle-array';
 
@@ -19677,10 +19677,10 @@ Vue.use(__WEBPACK_IMPORTED_MODULE_1_vue_socket_io___default.a, 'http://192.168.1
 
 var dash = Vue.component('user', __webpack_require__(188));
 var sueca_game = Vue.component('play', __webpack_require__(204));
-var login = Vue.component('login', __webpack_require__(239));
-var index = Vue.component('index', __webpack_require__(242));
-var statistics = Vue.component('statistics', __webpack_require__(247));
-var useraccount = Vue.component('useraccount', __webpack_require__(252));
+var login = Vue.component('login', __webpack_require__(231));
+var index = Vue.component('index', __webpack_require__(234));
+var statistics = Vue.component('statistics', __webpack_require__(239));
+var useraccount = Vue.component('useraccount', __webpack_require__(244));
 
 var routes = [{
   path: '/',
@@ -53219,7 +53219,7 @@ module.exports = __webpack_require__(61);
 /* 3 */
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(7);
+module.exports = __webpack_require__(5);
 
 /***/ }),
 /* 4 */
@@ -53231,7 +53231,7 @@ module.exports = __webpack_require__(9);
 /* 5 */
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(6);
+module.exports = __webpack_require__(4);
 
 /***/ }),
 /* 6 */
@@ -83750,11 +83750,11 @@ var RE_NARGS = /(%|)\{([0-9a-zA-Z_]+)\}/g;
 
 exports.__esModule = true;
 
-var _vue = __webpack_require__(6);
+var _vue = __webpack_require__(4);
 
 var _vue2 = _interopRequireDefault(_vue);
 
-var _dom = __webpack_require__(7);
+var _dom = __webpack_require__(5);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -86050,7 +86050,7 @@ var esExports = { render: render, staticRenderFns: staticRenderFns }
 
 exports.__esModule = true;
 
-var _dom = __webpack_require__(7);
+var _dom = __webpack_require__(5);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -86220,7 +86220,7 @@ module.exports = __webpack_require__(20);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(7);
+module.exports = __webpack_require__(5);
 
 /***/ }),
 
@@ -86515,7 +86515,7 @@ module.exports = __webpack_require__(9);
 /***/ 5:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(6);
+module.exports = __webpack_require__(4);
 
 /***/ }),
 
@@ -88640,7 +88640,7 @@ module.exports = __webpack_require__(36);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(7);
+module.exports = __webpack_require__(5);
 
 /***/ }),
 
@@ -90766,7 +90766,7 @@ module.exports = __webpack_require__(14) ? Object.defineProperties : function de
 /* 148 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var document = __webpack_require__(8).document;
+var document = __webpack_require__(6).document;
 module.exports = document && document.documentElement;
 
 
@@ -90794,7 +90794,7 @@ module.exports = Object.getPrototypeOf || function (O) {
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(151);
-var global = __webpack_require__(8);
+var global = __webpack_require__(6);
 var hide = __webpack_require__(12);
 var Iterators = __webpack_require__(46);
 var TO_STRING_TAG = __webpack_require__(16)('toStringTag');
@@ -90895,7 +90895,7 @@ module.exports = __webpack_require__(21).Symbol;
 "use strict";
 
 // ECMAScript 6 symbols shim
-var global = __webpack_require__(8);
+var global = __webpack_require__(6);
 var has = __webpack_require__(10);
 var DESCRIPTORS = __webpack_require__(14);
 var $export = __webpack_require__(37);
@@ -92712,7 +92712,7 @@ module.exports = __webpack_require__(35);
 /***/ 2:
 /***/ (function(module, exports) {
 
-module.exports = __webpack_require__(7);
+module.exports = __webpack_require__(5);
 
 /***/ }),
 
@@ -92838,7 +92838,7 @@ var content = __webpack_require__(190);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("58e77cb4", content, false);
+var update = __webpack_require__(8)("58e77cb4", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -92857,7 +92857,7 @@ if(false) {
 /* 190 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
@@ -93008,7 +93008,7 @@ var content = __webpack_require__(194);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("e36ab832", content, false);
+var update = __webpack_require__(8)("e36ab832", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -93027,7 +93027,7 @@ if(false) {
 /* 194 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
@@ -93187,7 +93187,7 @@ var content = __webpack_require__(198);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("a25a7f5e", content, false);
+var update = __webpack_require__(8)("a25a7f5e", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -93206,7 +93206,7 @@ if(false) {
 /* 198 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
@@ -93752,7 +93752,7 @@ var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(207)
 /* template */
-var __vue_template__ = __webpack_require__(238)
+var __vue_template__ = __webpack_require__(230)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -93802,7 +93802,7 @@ var content = __webpack_require__(206);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("494fae04", content, false);
+var update = __webpack_require__(8)("494fae04", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -93821,12 +93821,12 @@ if(false) {
 /* 206 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
 // module
-exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
+exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
 
 // exports
 
@@ -93923,6 +93923,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                 alert("Error: Player not valid for this game");
             } else if (errorObject.type == 'Invalid_Play') {
                 alert("Error: Move is not valid or it's not your turn");
+            } else if (errorObject.type == 'Wrong_Turn') {
+                alert("Error: It's not your turn");
             } else {
                 alert("Error: " + errorObject.type);
             }
@@ -94024,11 +94026,15 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                 avatar: this.$store.getters.getAvatar
             });
         },
-        play: function play(game, index) {
+        play: function play(data) {
+
             this.$socket.emit('play', {
-                gameID: game.gameID,
-                index: index
+                gameID: data.gameID,
+                playerID: this.$store.getters.getID,
+                index: data.index
             });
+
+            //console.log("CARDINDEX: "+ index);
         },
         close: function close(game) {
             this.$socket.emit('remove_game', {
@@ -94119,7 +94125,7 @@ var content = __webpack_require__(210);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("3d1fc83e", content, false);
+var update = __webpack_require__(8)("3d1fc83e", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -94138,7 +94144,7 @@ if(false) {
 /* 210 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
@@ -94334,7 +94340,7 @@ var normalizeComponent = __webpack_require__(1)
 /* script */
 var __vue_script__ = __webpack_require__(216)
 /* template */
-var __vue_template__ = __webpack_require__(237)
+var __vue_template__ = __webpack_require__(229)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -94384,7 +94390,7 @@ var content = __webpack_require__(215);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("7ed11744", content, false);
+var update = __webpack_require__(8)("7ed11744", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -94403,7 +94409,7 @@ if(false) {
 /* 215 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
@@ -94421,12 +94427,16 @@ exports.push([module.i, "\n.gameseparator[data-v-81c9d1a2] {\n    border-style: 
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__boards_player1Board_vue__ = __webpack_require__(217);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__boards_player1Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__boards_player1Board_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue__ = __webpack_require__(222);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue__ = __webpack_require__(220);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__boards_player2Board_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue__ = __webpack_require__(227);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue__ = __webpack_require__(223);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__boards_player3Board_vue__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue__ = __webpack_require__(232);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue__ = __webpack_require__(226);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3__boards_player4Board_vue__);
+//
+//
+//
+//
 //
 //
 //
@@ -94481,12 +94491,17 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         }
     },
     methods: {
-        play: function play(index) {
-            this.$socket.emit('play', {
-                gameID: this.game.gameID,
-                playerNumber: this.ownPlayerNumber,
-                index: index
-            });
+        play: function play(card_index) {
+            console.log("Player Turn: " + this.game.playerTurn);
+
+            if (this.game.playerTurn != this.$store.getters.getID) {
+                alert("It's not your turn to play!");
+            } else {
+                this.$emit('play', {
+                    gameID: this.game.gameID,
+                    index: card_index
+                });
+            }
         },
         sendMessage: function sendMessage() {
             var data = {
@@ -94513,9 +94528,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 var disposed = false
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(220)
+var __vue_script__ = __webpack_require__(218)
 /* template */
-var __vue_template__ = __webpack_require__(264)
+var __vue_template__ = __webpack_require__(219)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -94555,9 +94570,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 218 */,
-/* 219 */,
-/* 220 */
+/* 218 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -94694,16 +94707,295 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 221 */,
-/* 222 */
+/* 219 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", [
+      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
+        _vm._v("Game " + _vm._s(_vm.game.gameID))
+      ]),
+      _vm._v(" "),
+      _c("br")
+    ]),
+    _vm._v(" "),
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[1].hand, function(card) {
+                    return _c("img", {
+                      staticClass: "teamMateHand",
+                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[2].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[3].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[0].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+            })
+          ]
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr")
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-fc545baa", module.exports)
+  }
+}
+
+/***/ }),
+/* 220 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(225)
+var __vue_script__ = __webpack_require__(221)
 /* template */
-var __vue_template__ = __webpack_require__(266)
+var __vue_template__ = __webpack_require__(222)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -94743,9 +95035,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 223 */,
-/* 224 */,
-/* 225 */
+/* 221 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -94876,22 +95166,301 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             return 'img/' + imgSrc + '.png';
         },
         avatarURL: function avatarURL(avatar) {
-            return 'img/avatars' + avatar;
+            return 'img/avatars/' + avatar;
         }
     }
 });
 
 /***/ }),
-/* 226 */,
-/* 227 */
+/* 222 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", [
+      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
+        _vm._v("Game " + _vm._s(_vm.game.gameID))
+      ]),
+      _vm._v(" "),
+      _c("br")
+    ]),
+    _vm._v(" "),
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[0].hand, function(card) {
+                    return _c("img", {
+                      staticClass: "teamMateHand",
+                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[3].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[2].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[1].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+            })
+          ]
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr")
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-761f434a", module.exports)
+  }
+}
+
+/***/ }),
+/* 223 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(230)
+var __vue_script__ = __webpack_require__(224)
 /* template */
-var __vue_template__ = __webpack_require__(267)
+var __vue_template__ = __webpack_require__(225)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -94931,9 +95500,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 228 */,
-/* 229 */,
-/* 230 */
+/* 224 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -95064,22 +95631,301 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             return 'img/' + imgSrc + '.png';
         },
         avatarURL: function avatarURL(avatar) {
-            return 'img/avatars' + avatar;
+            return 'img/avatars/' + avatar;
         }
     }
 });
 
 /***/ }),
-/* 231 */,
-/* 232 */
+/* 225 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", [
+      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
+        _vm._v("Game " + _vm._s(_vm.game.gameID))
+      ]),
+      _vm._v(" "),
+      _c("br")
+    ]),
+    _vm._v(" "),
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[3].hand, function(card) {
+                    return _c("img", {
+                      staticClass: "teamMateHand",
+                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[1].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[0].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[2].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+            })
+          ]
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr")
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-6a68b469", module.exports)
+  }
+}
+
+/***/ }),
+/* 226 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(235)
+var __vue_script__ = __webpack_require__(227)
 /* template */
-var __vue_template__ = __webpack_require__(265)
+var __vue_template__ = __webpack_require__(228)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -95119,9 +95965,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 233 */,
-/* 234 */,
-/* 235 */
+/* 227 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -95252,14 +96096,293 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             return 'img/' + imgSrc + '.png';
         },
         avatarURL: function avatarURL(avatar) {
-            return 'img/avatars' + avatar;
+            return 'img/avatars/' + avatar;
         }
     }
 });
 
 /***/ }),
-/* 236 */,
-/* 237 */
+/* 228 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", [
+    _c("div", [
+      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
+        _vm._v("Game " + _vm._s(_vm.game.gameID))
+      ]),
+      _vm._v(" "),
+      _c("br")
+    ]),
+    _vm._v(" "),
+    _c("div", { staticClass: "board container-fluid" }, [
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
+            })
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[2].hand, function(card) {
+                    return _c("img", {
+                      staticClass: "teamMateHand",
+                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[0].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[2].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[2].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[0].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[0].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            ),
+            _vm._v(" "),
+            _c(
+              "div",
+              {
+                staticClass: "col-md-6",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[1].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[1].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "row" }, [
+            _c(
+              "div",
+              {
+                staticClass: "col-md-12",
+                staticStyle: { "text-align": "center" }
+              },
+              [
+                !_vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: { src: _vm.cardImageURL("semFace") }
+                    })
+                  : _vm._e(),
+                _vm._v(" "),
+                _vm.game.players[3].cardTable
+                  ? _c("img", {
+                      staticClass: "playedCard",
+                      attrs: {
+                        src: _vm.cardImageURL(
+                          _vm.game.players[3].cardTable.image
+                        )
+                      }
+                    })
+                  : _vm._e()
+              ]
+            )
+          ])
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "col-md-4" }, [
+          _c("div", { staticClass: "container" }, [
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _c("img", {
+                  staticClass: "img-circle avatarGame",
+                  attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
+                })
+              ])
+            ]),
+            _vm._v(" "),
+            _c("div", { staticClass: "row" }, [
+              _c("div", { staticClass: "col-md-12" }, [
+                _vm.game.gameStarted
+                  ? _c(
+                      "div",
+                      _vm._l(_vm.game.players[1].hand, function(card) {
+                        return _c("img", {
+                          staticClass: "oponentsHand",
+                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
+                        })
+                      })
+                    )
+                  : _vm._e()
+              ])
+            ])
+          ])
+        ])
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _vm.game.gameStarted
+              ? _c(
+                  "div",
+                  _vm._l(_vm.game.players[3].hand, function(card, index) {
+                    return _c("img", {
+                      staticClass: "myHand",
+                      attrs: { src: _vm.cardImageURL(card.image) },
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.play(index)
+                        }
+                      }
+                    })
+                  })
+                )
+              : _vm._e()
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("div", { staticClass: "row" }, [
+        _c(
+          "div",
+          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
+          [
+            _c("img", {
+              staticClass: "img-circle avatarGame",
+              attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
+            })
+          ]
+        )
+      ])
+    ]),
+    _vm._v(" "),
+    _c("hr")
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-5eb22588", module.exports)
+  }
+}
+
+/***/ }),
+/* 229 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -95319,7 +96442,7 @@ if (false) {
 }
 
 /***/ }),
-/* 238 */
+/* 230 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -95406,15 +96529,15 @@ if (false) {
 }
 
 /***/ }),
-/* 239 */
+/* 231 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(240)
+var __vue_script__ = __webpack_require__(232)
 /* template */
-var __vue_template__ = __webpack_require__(241)
+var __vue_template__ = __webpack_require__(233)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -95454,7 +96577,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 240 */
+/* 232 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -95682,7 +96805,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_2_vue_router__["a" /* default */]();
 });
 
 /***/ }),
-/* 241 */
+/* 233 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -96018,19 +97141,19 @@ if (false) {
 }
 
 /***/ }),
-/* 242 */
+/* 234 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(243)
+  __webpack_require__(235)
 }
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(245)
+var __vue_script__ = __webpack_require__(237)
 /* template */
-var __vue_template__ = __webpack_require__(246)
+var __vue_template__ = __webpack_require__(238)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -96070,17 +97193,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 243 */
+/* 235 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(244);
+var content = __webpack_require__(236);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("03ff617c", content, false);
+var update = __webpack_require__(8)("03ff617c", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -96096,10 +97219,10 @@ if(false) {
 }
 
 /***/ }),
-/* 244 */
+/* 236 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
@@ -96110,7 +97233,7 @@ exports.push([module.i, "\nhtml, body {\n    background-color: #fff;\n    color:
 
 
 /***/ }),
-/* 245 */
+/* 237 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -96162,7 +97285,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 });
 
 /***/ }),
-/* 246 */
+/* 238 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -96228,19 +97351,19 @@ if (false) {
 }
 
 /***/ }),
-/* 247 */
+/* 239 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(248)
+  __webpack_require__(240)
 }
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(250)
+var __vue_script__ = __webpack_require__(242)
 /* template */
-var __vue_template__ = __webpack_require__(251)
+var __vue_template__ = __webpack_require__(243)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -96280,17 +97403,17 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 248 */
+/* 240 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(249);
+var content = __webpack_require__(241);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
-var update = __webpack_require__(5)("1d8c00da", content, false);
+var update = __webpack_require__(8)("1d8c00da", content, false);
 // Hot Module Replacement
 if(false) {
  // When the styles change, update the <style> tags
@@ -96306,10 +97429,10 @@ if(false) {
 }
 
 /***/ }),
-/* 249 */
+/* 241 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(4)(undefined);
+exports = module.exports = __webpack_require__(7)(undefined);
 // imports
 
 
@@ -96320,7 +97443,7 @@ exports.push([module.i, "\np[data-v-76d6ec20] {\r\n  font-size: 2em;\r\n  text-a
 
 
 /***/ }),
-/* 250 */
+/* 242 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -96627,7 +97750,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 251 */
+/* 243 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -96907,15 +98030,15 @@ if (false) {
 }
 
 /***/ }),
-/* 252 */
+/* 244 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 var normalizeComponent = __webpack_require__(1)
 /* script */
-var __vue_script__ = __webpack_require__(253)
+var __vue_script__ = __webpack_require__(245)
 /* template */
-var __vue_template__ = __webpack_require__(254)
+var __vue_template__ = __webpack_require__(246)
 /* template functional */
   var __vue_template_functional__ = false
 /* styles */
@@ -96955,7 +98078,7 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 253 */
+/* 245 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -96979,7 +98102,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 });
 
 /***/ }),
-/* 254 */
+/* 246 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -96999,1138 +98122,10 @@ if (false) {
 }
 
 /***/ }),
-/* 255 */
+/* 247 */
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
-
-/***/ }),
-/* 256 */,
-/* 257 */,
-/* 258 */,
-/* 259 */,
-/* 260 */,
-/* 261 */,
-/* 262 */,
-/* 263 */,
-/* 264 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", [
-    _c("div", [
-      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
-        _vm._v("Game " + _vm._s(_vm.game.gameID))
-      ]),
-      _vm._v(" "),
-      _c("br")
-    ]),
-    _vm._v(" "),
-    _c("div", { staticClass: "board container-fluid" }, [
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
-            })
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[1].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "teamMateHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[2].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[1].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[2].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            ),
-            _vm._v(" "),
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[3].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[0].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[3].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ])
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[0].hand, function(card, index) {
-                    return _c("img", {
-                      staticClass: "myHand",
-                      attrs: { src: _vm.cardImageURL(card.image) },
-                      on: {
-                        click: function($event) {
-                          $event.preventDefault()
-                          _vm.play(index)
-                        }
-                      }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
-            })
-          ]
-        )
-      ])
-    ]),
-    _vm._v(" "),
-    _c("hr")
-  ])
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-fc545baa", module.exports)
-  }
-}
-
-/***/ }),
-/* 265 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", [
-    _c("div", [
-      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
-        _vm._v("Game " + _vm._s(_vm.game.gameID))
-      ]),
-      _vm._v(" "),
-      _c("br")
-    ]),
-    _vm._v(" "),
-    _c("div", { staticClass: "board container-fluid" }, [
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
-            })
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[2].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "teamMateHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[0].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[2].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[0].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            ),
-            _vm._v(" "),
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[1].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[3].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[1].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ])
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[3].hand, function(card, index) {
-                    return _c("img", {
-                      staticClass: "myHand",
-                      attrs: { src: _vm.cardImageURL(card.image) },
-                      on: {
-                        click: function($event) {
-                          $event.preventDefault()
-                          _vm.play(index)
-                        }
-                      }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
-            })
-          ]
-        )
-      ])
-    ]),
-    _vm._v(" "),
-    _c("hr")
-  ])
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-5eb22588", module.exports)
-  }
-}
-
-/***/ }),
-/* 266 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", [
-    _c("div", [
-      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
-        _vm._v("Game " + _vm._s(_vm.game.gameID))
-      ]),
-      _vm._v(" "),
-      _c("br")
-    ]),
-    _vm._v(" "),
-    _c("div", { staticClass: "board container-fluid" }, [
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
-            })
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[0].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "teamMateHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[3].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[0].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[3].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            ),
-            _vm._v(" "),
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[2].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[1].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[2].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ])
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[1].hand, function(card, index) {
-                    return _c("img", {
-                      staticClass: "myHand",
-                      attrs: { src: _vm.cardImageURL(card.image) },
-                      on: {
-                        click: function($event) {
-                          $event.preventDefault()
-                          _vm.play(index)
-                        }
-                      }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
-            })
-          ]
-        )
-      ])
-    ]),
-    _vm._v(" "),
-    _c("hr")
-  ])
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-761f434a", module.exports)
-  }
-}
-
-/***/ }),
-/* 267 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("div", [
-    _c("div", [
-      _c("h2", { staticClass: "text-center bg-primary text-white" }, [
-        _vm._v("Game " + _vm._s(_vm.game.gameID))
-      ]),
-      _vm._v(" "),
-      _c("br")
-    ]),
-    _vm._v(" "),
-    _c("div", { staticClass: "board container-fluid" }, [
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[3].avatar) }
-            })
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[3].hand, function(card) {
-                    return _c("img", {
-                      staticClass: "teamMateHand",
-                      attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[1].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[1].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[3].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[3].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[1].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[1].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            ),
-            _vm._v(" "),
-            _c(
-              "div",
-              {
-                staticClass: "col-md-6",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[0].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[0].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ]),
-          _vm._v(" "),
-          _c("div", { staticClass: "row" }, [
-            _c(
-              "div",
-              {
-                staticClass: "col-md-12",
-                staticStyle: { "text-align": "center" }
-              },
-              [
-                !_vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: { src: _vm.cardImageURL("semFace") }
-                    })
-                  : _vm._e(),
-                _vm._v(" "),
-                _vm.game.players[2].cardTable
-                  ? _c("img", {
-                      staticClass: "playedCard",
-                      attrs: {
-                        src: _vm.cardImageURL(
-                          _vm.game.players[2].cardTable.image
-                        )
-                      }
-                    })
-                  : _vm._e()
-              ]
-            )
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-4" }, [
-          _c("div", { staticClass: "container" }, [
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _c("img", {
-                  staticClass: "img-circle avatarGame",
-                  attrs: { src: _vm.avatarURL(_vm.game.players[0].avatar) }
-                })
-              ])
-            ]),
-            _vm._v(" "),
-            _c("div", { staticClass: "row" }, [
-              _c("div", { staticClass: "col-md-12" }, [
-                _vm.game.gameStarted
-                  ? _c(
-                      "div",
-                      _vm._l(_vm.game.players[0].hand, function(card) {
-                        return _c("img", {
-                          staticClass: "oponentsHand",
-                          attrs: { src: _vm.cardImageURL(card.imageToShow) }
-                        })
-                      })
-                    )
-                  : _vm._e()
-              ])
-            ])
-          ])
-        ])
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _vm.game.gameStarted
-              ? _c(
-                  "div",
-                  _vm._l(_vm.game.players[2].hand, function(card, index) {
-                    return _c("img", {
-                      staticClass: "myHand",
-                      attrs: { src: _vm.cardImageURL(card.image) },
-                      on: {
-                        click: function($event) {
-                          $event.preventDefault()
-                          _vm.play(index)
-                        }
-                      }
-                    })
-                  })
-                )
-              : _vm._e()
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "row" }, [
-        _c(
-          "div",
-          { staticClass: "col-md-12", staticStyle: { "text-align": "center" } },
-          [
-            _c("img", {
-              staticClass: "img-circle avatarGame",
-              attrs: { src: _vm.avatarURL(_vm.game.players[2].avatar) }
-            })
-          ]
-        )
-      ])
-    ]),
-    _vm._v(" "),
-    _c("hr")
-  ])
-}
-var staticRenderFns = []
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-6a68b469", module.exports)
-  }
-}
 
 /***/ })
 /******/ ]);

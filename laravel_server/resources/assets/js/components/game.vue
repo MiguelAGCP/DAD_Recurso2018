@@ -1,11 +1,15 @@
 <template>
     <div>
-       
-        
-            <player1-board :game="game" v-if="game.gameStarted && game.players[0] && game.players[0].playerID == $store.state.user.id" @play="play"></player1-board>
-            <player2-board :game="game" v-if="game.gameStarted && game.players[1] && game.players[1].playerID == $store.state.user.id" @play="play"></player2-board>
-            <player3-board :game="game" v-if="game.gameStarted && game.players[2] && game.players[2].playerID == $store.state.user.id" @play="play"></player3-board>
-            <player4-board :game="game" v-if="game.gameStarted && game.players[3] && game.players[3].playerID == $store.state.user.id" @play="play"></player4-board>
+
+
+        <player1-board :game="game" v-if="game.gameStarted && game.players[0] && game.players[0].playerID == $store.state.user.id"
+            @play="play"></player1-board>
+        <player2-board :game="game" v-if="game.gameStarted && game.players[1] && game.players[1].playerID == $store.state.user.id"
+            @play="play"></player2-board>
+        <player3-board :game="game" v-if="game.gameStarted && game.players[2] && game.players[2].playerID == $store.state.user.id"
+            @play="play"></player3-board>
+        <player4-board :game="game" v-if="game.gameStarted && game.players[3] && game.players[3].playerID == $store.state.user.id"
+            @play="play"></player4-board>
 
     </div>
 </template>
@@ -38,7 +42,7 @@
 
         },
         computed: {
-           ownPlayerNumber() {
+            ownPlayerNumber() {
                 if (this.game.players[0].playerID == this.$store.state.user.id) {
                     return 1;
                 } else if (this.game.players[1].playerID == this.$store.state.user.id) {
@@ -54,18 +58,19 @@
         },
         methods: {
 
-            play(index){
-                this.$socket.emit('play', {
-                    gameID: this.game.gameID,
-                    playerNumber: this.ownPlayerNumber,
-                    index: index,
-                });
+            play(card_index) {
+                console.log("Player Turn: " + this.game.playerTurn);
 
+                if (this.game.playerTurn != this.$store.getters.getID) {
+                    alert("It's not your turn to play!");
+                } else {
+                    this.$emit('play', {
+                        gameID: this.game.gameID,
+                        index: card_index,
+                    });
+                }
             },
 
-         
-        
-          
             sendMessage() {
                 let data = {
                     gameID: this.game.gameID,

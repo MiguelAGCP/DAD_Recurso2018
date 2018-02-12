@@ -16,7 +16,7 @@
             <hr> -->
 
 
-            
+
             <h3 class="text-center">Lobby</h3>
             <p>
                 <button class="btn btn-xs btn-success" v-on:click.prevent="createGame">Create a New Game</button>
@@ -41,21 +41,21 @@
         data: function () {
             return {
                 title: 'Sueca',
-               /*  currentPlayer: 'Player ' + Math.floor(Math.random() * 10000), */
-               currentPlayer: "",
+                /*  currentPlayer: 'Player ' + Math.floor(Math.random() * 10000), */
+                currentPlayer: "",
                 lobbyGames: [],
                 activeGames: [],
                 socketId: "",
-                
+
             }
         },
         sockets: {
             connect() {
-            //    console.log('socket connected');
+                //    console.log('socket connected');
                 this.socketId = this.$socket.id;
             },
             discconnect() {
-            //    console.log('socket disconnected');
+                //    console.log('socket disconnected');
                 this.socketId = "";
             },
             lobby_changed() {
@@ -78,6 +78,8 @@
                     alert("Error: Player not valid for this game");
                 } else if (errorObject.type == 'Invalid_Play') {
                     alert("Error: Move is not valid or it's not your turn");
+                } else if (errorObject.type == 'Wrong_Turn') {
+                    alert("Error: It's not your turn");
                 } else {
                     alert("Error: " + errorObject.type);
                 }
@@ -92,7 +94,7 @@
                 }
                 for (var activeGame of this.activeGames) {
                     if (game.gameID == activeGame.gameID) {
-                        
+
                         Object.assign(activeGame, game);
                         console.table(game.players[0].cardTable);
                         if (activeGame.gameEnded) {
@@ -139,11 +141,16 @@
                     avatar: this.$store.getters.getAvatar
                 });
             },
-            play(game, index) {
-                this.$socket.emit('play', {
-                    gameID: game.gameID,
-                    index: index
-                });
+            play(data) {
+              
+                    this.$socket.emit('play', {
+                        gameID: data.gameID,
+                        playerID: this.$store.getters.getID,
+                        index: data.index,
+                    });
+                
+                //console.log("CARDINDEX: "+ index);
+
             },
             close(game) {
                 this.$socket.emit('remove_game', {
@@ -151,8 +158,8 @@
                 });
             },
             start(game) {
-                
-                this.$socket.emit('start_game', {                    
+
+                this.$socket.emit('start_game', {
                     gameID: game.gameID,
                 });
             },
@@ -166,13 +173,12 @@
             'nav-bar': NavBar,
         },
         mounted() {
-            this.currentPlayer =  this.$store.getters.getNickname;
-            this.loadLobby();      
-            }
+            this.currentPlayer = this.$store.getters.getNickname;
+            this.loadLobby();
+        }
 
     }
 </script>
 
 <style>
-
 </style>
