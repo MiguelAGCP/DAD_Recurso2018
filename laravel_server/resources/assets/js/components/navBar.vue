@@ -9,6 +9,7 @@
                             <el-menu-item index="3"><router-link to="/statistics">Statistics</router-link></el-menu-item>
                         </el-menu>
             </div>
+<<<<<<< HEAD
 
 
 
@@ -21,6 +22,18 @@
             </el-submenu>
             </el-menu>
             
+=======
+          <div class="dropdown col-md-1" align="left">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <img :src="myAvatar" class="img-circle avatarBadge">
+                {{$store.state.user.nickname}}
+                </button>
+                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                      <p class="dropdown-item" ><router-link to="/useraccount">  My Account</router-link></p>
+                      <p class="dropdown-item" v-on:click.prevent="logout()"><router-link to="/index">  Logout</router-link></p>                  
+                </div>
+                
+>>>>>>> b52a5c7cbf400b404c68f70f4dbf6cac8244da67
           </div>
 
 
@@ -52,8 +65,8 @@
 
             logout: function(){
 
-                console.log("Logging Out");
-                console.log(this.$store.state.user.headers.Authorization);
+            //    console.log("Logging Out");
+            //    console.log(this.$store.state.user.headers.Authorization);
 
                  var config = {
             headers: {
@@ -61,19 +74,19 @@
               Accept: "application/json"
             }
           };
-                 console.log("Logging Out");
-                console.log(config);
+            //     console.log("Logging Out");
+            //    console.log(config);
 
 
 
                 axios.post('api/logout', config).then(response=>{
-                    console.log(response.data);
+            //        console.log(response.data);
                    
-                    this.$store.state.user.nickname = "";
-                    this.$store.state.user.id = "";
-                    this.$store.state.user.refresh = "";
-                    this.$store.state.user.headers.Accept = "";
-                    this.$store.state.user.headers.Authorization = "";
+
+                    this.$store.commit('setNickname', "");
+                    this.$store.commit('setID', ""); 
+                    this.$store.commit('setRefreshToken', "");
+                    this.$store.commit('setHeaders', "");
                     sessionStorage.clear();
 
                     return this.$router.push("/index");
@@ -89,6 +102,9 @@
 
      },
      computed: {
+         myAvatar(){
+             return "img/avatars/" + this.$store.getters.getAvatar;
+         }
 
      },
      mounted(){

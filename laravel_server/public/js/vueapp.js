@@ -19721,6 +19721,7 @@ var store = new __WEBPACK_IMPORTED_MODULE_2_vuex__["a" /* default */].Store({
     user: {
       id: '',
       nickname: '',
+      avatar: '',
       admin: '',
       refreshToken: '',
       authToken: '',
@@ -19748,6 +19749,9 @@ var store = new __WEBPACK_IMPORTED_MODULE_2_vuex__["a" /* default */].Store({
     },
     setHeaders: function setHeaders(state, token) {
       state.user.headers.Authorization = 'Bearer ' + token;
+    },
+    setAvatar: function setAvatar(state, avatar) {
+      state.user.avatar = avatar;
     }
   },
   getters: {
@@ -19768,11 +19772,14 @@ var store = new __WEBPACK_IMPORTED_MODULE_2_vuex__["a" /* default */].Store({
     },
     getHeaders: function getHeaders(state) {
       return state.user.headers;
+    },
+    getAvatar: function getAvatar(state) {
+      return state.user.avatar;
     }
   },
 
-  methods: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["c" /* mapMutations */])(['setID', 'setNickname', 'setAdmin', 'setAuthToken', 'setRefreshToken', 'setHeaders'])),
-  computed: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["b" /* mapGetters */])(['getID', 'getNickname', 'getAuthToken', 'getRefreshToken', 'getAdmin', 'getHeaders'])),
+  methods: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["c" /* mapMutations */])(['setID', 'setNickname', 'setAdmin', 'setAuthToken', 'setRefreshToken', 'setHeaders', 'setAvatar'])),
+  computed: _extends({}, Object(__WEBPACK_IMPORTED_MODULE_2_vuex__["b" /* mapGetters */])(['getID', 'getNickname', 'getAuthToken', 'getRefreshToken', 'getAdmin', 'getHeaders', 'getAvatar'])),
   plugins: [vuexLocal.plugin]
 
 });
@@ -93824,7 +93831,7 @@ exports = module.exports = __webpack_require__(7)(undefined);
 
 
 // module
-exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
+exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
 
 // exports
 
@@ -93841,6 +93848,11 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__game_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__game_vue__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__navBar_vue__ = __webpack_require__(52);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__navBar_vue___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__navBar_vue__);
+//
+//
+//
+//
+//
 //
 //
 //
@@ -93889,11 +93901,11 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     },
     sockets: {
         connect: function connect() {
-            console.log('socket connected');
+            //    console.log('socket connected');
             this.socketId = this.$socket.id;
         },
         discconnect: function discconnect() {
-            console.log('socket disconnected');
+            //    console.log('socket disconnected');
             this.socketId = "";
         },
         lobby_changed: function lobby_changed() {
@@ -93903,6 +93915,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             this.loadActiveGames();
         },
         my_active_games: function my_active_games(games) {
+            //console.table(games);
             this.activeGames = games;
         },
         my_lobby_games: function my_lobby_games(games) {
@@ -93915,6 +93928,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                 alert("Error: Player not valid for this game");
             } else if (errorObject.type == 'Invalid_Play') {
                 alert("Error: Move is not valid or it's not your turn");
+            } else if (errorObject.type == 'Wrong_Turn') {
+                alert("Error: It's not your turn");
             } else {
                 alert("Error: " + errorObject.type);
             }
@@ -93957,7 +93972,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
                     var activeGame = _step2.value;
 
                     if (game.gameID == activeGame.gameID) {
+
                         Object.assign(activeGame, game);
+                        console.table(game.players[0].cardTable);
                         if (activeGame.gameEnded) {
                             alert("Game " + activeGame.gameID + " has Ended \n The winner is: " + activeGame.players[activeGame.winner - 1].playerName);
                         }
@@ -93988,17 +94005,21 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             this.$socket.emit('get_my_activegames');
         },
         createGame: function createGame() {
+            console.log("MY ID: " + this.$store.getters.getID);
             if (this.currentPlayer == "") {
                 alert('Current Player is Empty - Cannot Create a Game');
                 return;
             } else {
                 this.$socket.emit('create_game', {
                     playerName: this.currentPlayer,
-                    playerID: this.$store.getters.getID
+                    playerID: this.$store.getters.getID,
+                    avatar: this.$store.getters.getAvatar
                 });
             }
         },
         join: function join(game) {
+            console.log("MY ID: " + this.$store.getters.getID);
+
             if (game.player1 == this.currentPlayer) {
                 alert('Cannot join a game because your name is the same as Player 1');
                 return;
@@ -94006,14 +94027,19 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
             this.$socket.emit('join_game', {
                 gameID: game.gameID,
                 playerID: this.$store.getters.getID,
-                playerName: this.currentPlayer
+                playerName: this.currentPlayer,
+                avatar: this.$store.getters.getAvatar
             });
         },
-        play: function play(game, index) {
+        play: function play(data) {
+
             this.$socket.emit('play', {
-                gameID: game.gameID,
-                index: index
+                gameID: data.gameID,
+                playerID: this.$store.getters.getID,
+                index: data.index
             });
+
+            //console.log("CARDINDEX: "+ index);
         },
         close: function close(game) {
             this.$socket.emit('remove_game', {
@@ -94038,7 +94064,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     mounted: function mounted() {
         this.currentPlayer = this.$store.getters.getNickname;
         this.loadLobby();
-        /*console.log(window.sessionStorage); */
     }
 });
 
@@ -94185,7 +94210,7 @@ module.exports = {
 			this.$emit('join-click', game);
 		},
 		startgame: function startgame(game) {
-			console.log("GAME STARTED" + game.gameID);
+			//	console.log("GAME STARTED" + game.gameID);
 			this.$emit("start-game", game);
 		}
 	},
@@ -94237,20 +94262,23 @@ var render = function() {
               : _vm._e(),
             _vm._v(" "),
             _c("td", [
-              _c(
-                "a",
-                {
-                  staticClass: "btn btn-xs btn-primary",
-                  on: {
-                    click: function($event) {
-                      $event.preventDefault()
-                      _vm.join(game)
-                    }
-                  }
-                },
-                [_vm._v("Join")]
-              ),
+              game.players[0].playerID != _vm.$store.getters.getID
+                ? _c(
+                    "a",
+                    {
+                      staticClass: "btn btn-xs btn-primary",
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          _vm.join(game)
+                        }
+                      }
+                    },
+                    [_vm._v("Join")]
+                  )
+                : _vm._e(),
               _vm._v(" "),
+              game.playerCount == 4 &&
               game.players[0].playerID == _vm.$store.getters.getID
                 ? _c(
                     "a",
@@ -94876,43 +94904,6 @@ var render = function() {
       _c(
         "div",
         [
-          _c("h3", { staticClass: "text-center" }, [_vm._v(_vm._s(_vm.title))]),
-          _vm._v(" "),
-          _c("br"),
-          _vm._v(" "),
-          _c("h2", [_vm._v("Current Player : " + _vm._s(_vm.currentPlayer))]),
-          _vm._v(" "),
-          _c("p", [
-            _vm._v("Set current player name\n            "),
-            _c("input", {
-              directives: [
-                {
-                  name: "model",
-                  rawName: "v-model.trim",
-                  value: _vm.currentPlayer,
-                  expression: "currentPlayer",
-                  modifiers: { trim: true }
-                }
-              ],
-              domProps: { value: _vm.currentPlayer },
-              on: {
-                input: function($event) {
-                  if ($event.target.composing) {
-                    return
-                  }
-                  _vm.currentPlayer = $event.target.value.trim()
-                },
-                blur: function($event) {
-                  _vm.$forceUpdate()
-                }
-              }
-            })
-          ]),
-          _vm._v(" "),
-          _vm._m(0),
-          _vm._v(" "),
-          _c("hr"),
-          _vm._v(" "),
           _c("h3", { staticClass: "text-center" }, [_vm._v("Lobby")]),
           _vm._v(" "),
           _c("p", [
@@ -94974,20 +94965,7 @@ var render = function() {
     1
   )
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("p", [
-      _c("em", [
-        _vm._v(
-          "Player name replaces authentication! Use different names on different browsers, and don't change it frequently."
-        )
-      ])
-    ])
-  }
-]
+var staticRenderFns = []
 render._withStripped = true
 module.exports = { render: render, staticRenderFns: staticRenderFns }
 if (false) {

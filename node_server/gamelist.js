@@ -1,6 +1,6 @@
 /*jshint esversion: 6 */
 
-var MemoryGame = require('./gamemodel.js');
+var SuecaGame = require('./gamemodel.js');
 
 class GameList {
 	constructor() {
@@ -13,36 +13,30 @@ class GameList {
     	return game;
     }
 
-    createGame(playerName, socketID) {
+    createGame(playerID, playerName, socketID, avatar) {
     	this.contadorID = this.contadorID+1;
-    	var game = new MemoryGame(this.contadorID, playerName);
-    	game.player1SocketID = socketID;
+    	var game = new SuecaGame(this.contadorID, playerID, playerName, socketID, avatar);
+    	//game.player1SocketID = socketID;
     	this.games.set(game.gameID, game);
     	return game;
     }
 
-    joinGame(gameID, playerName, socketID) {
+    joinGame(gameID, playerID, playerName, socketID, avatar) {
     	let game = this.gameByID(gameID);
     	if (game===null) {
     		return null;
 		}
-		if(game.player1SocketID && !game.player2SocketID && !game.player3SocketID && !game.player4SocketID){
-			game.join(playerName);
-			game.player2SocketID = socketID;
-		}else
-		if(game.player1SocketID && game.player2SocketID && !game.player3SocketID && !game.player4SocketID){
-			game.join(playerName);
-			game.player3SocketID = socketID;
-		}else
-		if(game.player1SocketID && game.player2SocketID && game.player3SocketID && !game.player4SocketID){
-			game.join(playerName);
-			game.player4SocketID = socketID;
-		} 
-    	return game;
+		if(game.join(playerID, playerName, socketID, avatar)){
+			return game;
+		}
+		else{
+			return false;
+		}
+    	
 	}
-	startGame(gameID, totCols, totLines, defaultSize){
+	startGame(gameID){
 		let game = this.gameByID(gameID);
-		game.startGame(totCols, totLines, defaultSize);
+		game.startGame();
 		return game;
 	}
 
@@ -65,7 +59,10 @@ class GameList {
     getConnectedGamesOf(socketID) {
     	let games = [];
     	for (var [key, value] of this.games) {
-    		if ((value.player1SocketID == socketID) || (value.player2SocketID == socketID) || value.player3SocketID || value.player4SocketID) {
+    		/* if ((value.player1SocketID == socketID) || (value.player2SocketID == socketID) || value.player3SocketID || value.player4SocketID) {
+    			games.push(value);
+			} */
+			if ((value.players[0].socketID == socketID) || (value.players[1].socketID == socketID) || value.players[2].socketID || value.players[3].socketID) {
     			games.push(value);
     		}
 		}

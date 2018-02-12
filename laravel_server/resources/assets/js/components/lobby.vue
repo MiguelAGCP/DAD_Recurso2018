@@ -26,8 +26,8 @@
 					<td v-if="!game.players[3]"> Waiting for player 4</td>
 
 					<td>
-						<a class="btn btn-xs btn-primary" v-on:click.prevent="join(game)">Join</a>
-						<a class="btn btn-xs btn-success" v-on:click.prevent="startgame(game)" v-if="game.players[0].playerID == $store.getters.getID">Start</a>
+						<a class="btn btn-xs btn-primary" v-on:click.prevent="join(game)" v-if="game.players[0].playerID != $store.getters.getID">Join</a>
+						<a class="btn btn-xs btn-success" v-on:click.prevent="startgame(game)" v-if="game.playerCount==4 && game.players[0].playerID == $store.getters.getID">Start</a>
 					</td>
 
 				</tr>
@@ -45,7 +45,7 @@
             	this.$emit('join-click', game);
 			},	
 			startgame(game) {
-				console.log("GAME STARTED" + game.gameID);
+			//	console.log("GAME STARTED" + game.gameID);
                 this.$emit("start-game", game);
             },	
 		},	

@@ -2,7 +2,9 @@
     <div>
         <nav-bar></nav-bar>
         <div>
-            <h3 class="text-center">{{ title }}</h3>
+            <!-- <h3 class="text-center">{{ title }}</h3>
+
+            
             <br>
             <h2>Current Player : {{ currentPlayer }}</h2>
             <p>Set current player name
@@ -11,7 +13,10 @@
             <p>
                 <em>Player name replaces authentication! Use different names on different browsers, and don't change it frequently.</em>
             </p>
-            <hr>
+            <hr> -->
+
+
+
             <h3 class="text-center">Lobby</h3>
             <p>
                 <button class="btn btn-xs btn-success" v-on:click.prevent="createGame">Create a New Game</button>
@@ -36,21 +41,21 @@
         data: function () {
             return {
                 title: 'Sueca',
-               /*  currentPlayer: 'Player ' + Math.floor(Math.random() * 10000), */
-               currentPlayer: "",
+                /*  currentPlayer: 'Player ' + Math.floor(Math.random() * 10000), */
+                currentPlayer: "",
                 lobbyGames: [],
                 activeGames: [],
                 socketId: "",
-                
+
             }
         },
         sockets: {
             connect() {
-                console.log('socket connected');
+                //    console.log('socket connected');
                 this.socketId = this.$socket.id;
             },
             discconnect() {
-                console.log('socket disconnected');
+                //    console.log('socket disconnected');
                 this.socketId = "";
             },
             lobby_changed() {
@@ -60,6 +65,7 @@
                 this.loadActiveGames();
             },
             my_active_games(games) {
+                //console.table(games);
                 this.activeGames = games;
             },
             my_lobby_games(games) {
@@ -72,6 +78,8 @@
                     alert("Error: Player not valid for this game");
                 } else if (errorObject.type == 'Invalid_Play') {
                     alert("Error: Move is not valid or it's not your turn");
+                } else if (errorObject.type == 'Wrong_Turn') {
+                    alert("Error: It's not your turn");
                 } else {
                     alert("Error: " + errorObject.type);
                 }
@@ -86,7 +94,9 @@
                 }
                 for (var activeGame of this.activeGames) {
                     if (game.gameID == activeGame.gameID) {
+
                         Object.assign(activeGame, game);
+                        console.table(game.players[0].cardTable);
                         if (activeGame.gameEnded) {
                             alert("Game " + activeGame.gameID + " has Ended \n The winner is: " +
                                 activeGame.players[activeGame.winner - 1].playerName);
@@ -105,32 +115,42 @@
                 this.$socket.emit('get_my_activegames');
             },
             createGame() {
+                console.log("MY ID: " + this.$store.getters.getID);
                 if (this.currentPlayer == "") {
                     alert('Current Player is Empty - Cannot Create a Game');
                     return;
                 } else {
                     this.$socket.emit('create_game', {
                         playerName: this.currentPlayer,
-                        playerID: this.$store.getters.getID
+                        playerID: this.$store.getters.getID,
+                        avatar: this.$store.getters.getAvatar
                     });
                 }
             },
             join(game) {
+                console.log("MY ID: " + this.$store.getters.getID);
+
                 if (game.player1 == this.currentPlayer) {
                     alert('Cannot join a game because your name is the same as Player 1');
                     return;
                 }
                 this.$socket.emit('join_game', {
                     gameID: game.gameID,
-                     playerID: this.$store.getters.getID,
-                    playerName: this.currentPlayer
+                    playerID: this.$store.getters.getID,
+                    playerName: this.currentPlayer,
+                    avatar: this.$store.getters.getAvatar
                 });
             },
-            play(game, index) {
-                this.$socket.emit('play', {
-                    gameID: game.gameID,
-                    index: index
-                });
+            play(data) {
+              
+                    this.$socket.emit('play', {
+                        gameID: data.gameID,
+                        playerID: this.$store.getters.getID,
+                        index: data.index,
+                    });
+                
+                //console.log("CARDINDEX: "+ index);
+
             },
             close(game) {
                 this.$socket.emit('remove_game', {
@@ -138,8 +158,8 @@
                 });
             },
             start(game) {
-                
-                this.$socket.emit('start_game', {                    
+
+                this.$socket.emit('start_game', {
                     gameID: game.gameID,
                 });
             },
@@ -153,13 +173,12 @@
             'nav-bar': NavBar,
         },
         mounted() {
-            this.currentPlayer =  this.$store.getters.getNickname;
+            this.currentPlayer = this.$store.getters.getNickname;
             this.loadLobby();
-            /*console.log(window.sessionStorage); */        }
+        }
 
     }
 </script>
 
 <style>
-
 </style>

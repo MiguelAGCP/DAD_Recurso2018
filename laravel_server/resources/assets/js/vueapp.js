@@ -82,6 +82,7 @@ const store = new Vuex.Store({
     user: {
       id: '',
       nickname: '',
+      avatar: '',
       admin: '',
       refreshToken: '',
       authToken: '',
@@ -110,6 +111,9 @@ const store = new Vuex.Store({
     setHeaders(state, token) {
       state.user.headers.Authorization = 'Bearer ' + token;
     },
+    setAvatar(state, avatar) {
+      state.user.avatar = avatar;
+    },
 
   },
   getters: {
@@ -130,6 +134,9 @@ const store = new Vuex.Store({
     },
     getHeaders(state){
       return state.user.headers;
+    },
+    getAvatar(state){
+      return state.user.avatar;
     }
   },
 
@@ -140,7 +147,8 @@ const store = new Vuex.Store({
       'setAdmin',
       'setAuthToken',
       'setRefreshToken',
-      'setHeaders'
+      'setHeaders',
+      'setAvatar'
     ])
   },
   computed: {
@@ -150,7 +158,8 @@ const store = new Vuex.Store({
       'getAuthToken',
       'getRefreshToken',
       'getAdmin',
-      'getHeaders'
+      'getHeaders',
+      'getAvatar'
     ])
   },
   plugins: [vuexLocal.plugin]

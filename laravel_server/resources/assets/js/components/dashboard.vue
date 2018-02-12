@@ -37,11 +37,11 @@
 				this.showSuccess = false;
 			},
 			deleteUser: function (user) {
-				console.log("USERID:  " + user.id)
+			//	console.log("USERID:  " + user.id)
 				axios.delete('api/users/' + user.id)
 					.then(response => {
-						console.log(response.data.data);
-						console.log(response.data);
+					//	console.log(response.data.data);
+					//	console.log(response.data);
 						this.showSuccess = true;
 						this.successMessage = 'User Deleted';
 						this.getUsers();
@@ -62,7 +62,7 @@
 				axios.get('api/users')
 					.then(response => {
 
-						console.log("Get Users");
+					//	console.log("Get Users");
 						this.users = response.data.data;
 					});
 			},
@@ -75,7 +75,10 @@
 			'user-list': UserList,
 			'user-edit': UserEdit,
 			'nav-bar': NavBar,
+<<<<<<< HEAD
 
+=======
+>>>>>>> b52a5c7cbf400b404c68f70f4dbf6cac8244da67
 		},
 		mounted() {
 			this.getUsers();

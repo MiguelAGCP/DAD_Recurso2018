@@ -2,24 +2,11 @@
 
 var app = require('http').createServer();
 
-// CORS TRIALS
-// var app = require('http').createServer(function(req,res){
-// 	// Set CORS headers
-// 	res.setHeader('Access-Control-Allow-Origin', 'http://dad.p6.dev');
-// 	res.setHeader('Access-Control-Request-Method', '*');
-// 	res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET');
-// 	res.setHeader('Access-Control-Allow-Credentials', true);
-// 	res.setHeader('Access-Control-Allow-Headers', req.header.origin);
-// 	if ( req.method === 'OPTIONS' ) {
-// 		res.writeHead(200);
-// 		res.end();
-// 		return;
-// 	}
-// });
+
 
 var io = require('socket.io')(app);
 
-var MemoryGame = require('./gamemodel.js');
+var SuecaGame = require('./gamemodel.js');
 var GameList = require('./gamelist.js');
 
 
@@ -37,7 +24,7 @@ io.on('connection', function (socket) {
 	console.log('client has connected');
 
 	socket.on('create_game', function (data) {
-		let game = games.createGame(data.playerName, socket.id);
+		let game = games.createGame(data.playerID, data.playerName, socket.id, data.avatar);
 		socket.join(game.gameID);
 		// Notifications to the client
 		socket.emit('my_active_games_changed');
@@ -45,16 +32,19 @@ io.on('connection', function (socket) {
 	});
 
 	socket.on('start_game', function (data) {
-		let game = games.startGame(data.gameID, data.totCols, data.totLines, data.defaultSize);
+		let game = games.startGame(data.gameID);
 		io.to(game.gameID).emit('game_started');
 		io.to(game.gameID).emit('my_active_games_changed');
 	});
 
 	socket.on('join_game', function (data) {
-		let game = games.joinGame(data.gameID, data.playerName, socket.id);
-		socket.join(game.gameID);
-		io.to(game.gameID).emit('my_active_games_changed');
+		let game = games.joinGame(data.gameID, data.playerID, data.playerName, socket.id, data.avatar);
+		if (game){
+			socket.join(game.gameID);
+			io.to(game.gameID).emit('my_active_games_changed');
 		io.emit('lobby_changed');
+		}
+		
 	});
 
 	socket.on('remove_game', function (data) {
@@ -62,54 +52,14 @@ io.on('connection', function (socket) {
 		socket.emit('my_active_games_changed');
 	});
 
-
-
-	socket.on('playAll', function (game) {
-
-		io.to(game.gameID).emit('gameAll_changed', game);
-
-
-
-});
-
-
 	socket.on('play', function (data) {
-		//console.log("A player has made a moove");
-		let game = games.gameByID(data.gameID);
-		//console.log(game);
-		if (game === null) {
-			socket.emit('invalid_play', {
-				'type': 'Invalid_Game',
-				'game': null
-			});
-			return;
-		}
-		var numPlayer = 0;
-		if (game.player1SocketID == socket.id) {
-			numPlayer = 1;
-		} else if (game.player2SocketID == socket.id) {
-			numPlayer = 2;
-		} else if (game.player3SocketID == socket.id) {
-			numPlayer = 3;
-		} else if (game.player4SocketID == socket.id) {
-			numPlayer = 4;
-		}
-		if (numPlayer === 0) {
-			socket.emit('invalid_play', {
-				'type': 'Invalid_Player',
-				'game': game
-			});
-			return;
-		}
-		//console.log("Player number: " + numPlayer + "has made a moove!");
-				
-		if (game.play(numPlayer, data.index)) {			
-			io.to(game.gameID).emit('game_changed', game);
-			game.doMatch();
+		console.log("PlayerID on gameserver.js " + data.playerID);
+		let game = games.gameByID(data.gameID);				
+		if (game.play(data.playerID, data.index)) {			
 			io.to(game.gameID).emit('game_changed', game);			
 		} else {
 			socket.emit('invalid_play', {
-				'type': 'Invalid_Play',
+				'type': 'Wrong_Turn',
 				'game': game
 			});
 			return;
@@ -135,42 +85,6 @@ io.on('connection', function (socket) {
 		console.log("Message received on server");
 		io.to(data.gameID).emit("message_received", data);
 	});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-	socket.on("sendMessageToAll", function (data){
-		console.log("Message to all received on server");
-		io.sockets.emit("messagetoall_received", data);
-	});
-
-	socket.on("flipPiece", function(data){
-		let game = games.gameByID(data.gameID);
-		if(game.flipPiece(data.pieceToFlip)){
-			io.to(game.gameID).emit("game_changed", game);
-			console.log("piece flipped");
-		}
-
-	});
-*/	
+	
 
 });
