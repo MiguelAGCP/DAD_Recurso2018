@@ -20,11 +20,11 @@
           <div class="dropdown col-md-1" align="left">
                 <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <img :src="myAvatar" class="img-circle avatarBadge">
-                {{$store.state.user.nickname}}
+                {{$store.state.user.nickname}} <span class="glyphicon glyphicon-triangle-bottom"></span>
                 </button>
                   <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                      <p class="dropdown-item" ><router-link to="/useraccount">  My Account</router-link></p>
-                      <p class="dropdown-item" v-on:click.prevent="logout()"><router-link to="/index">  Logout</router-link></p>                  
+                      <p class="dropdown-item" ><router-link to="/useraccount"><span class="glyphicon glyphicon-user"> My Account</span></router-link></p>
+                      <p class="dropdown-item" v-on:click.prevent="logout()"><router-link to="/index"><span class="glyphicon glyphicon-log-out"> Logout</span></router-link></p>                  
                 </div>
                 
           </div>

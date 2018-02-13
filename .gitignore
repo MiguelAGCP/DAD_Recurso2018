@@ -90,5 +90,9 @@ typings/
 !.vscode/extensions.json
 .history
 
+##VUE
+public/js
+public/css
+
 
 # End of https://www.gitignore.io/api/node,laravel,visualstudiocode

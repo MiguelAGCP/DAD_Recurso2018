@@ -20,6 +20,7 @@ app.listen(8080, function () {
 
 let games = new GameList();
 
+
 io.on('connection', function (socket) {
 	console.log('client has connected');
 
@@ -56,7 +57,21 @@ io.on('connection', function (socket) {
 		console.log("PlayerID on gameserver.js " + data.playerID);
 		let game = games.gameByID(data.gameID);				
 		if (game.play(data.playerID, data.index)) {			
-			io.to(game.gameID).emit('game_changed', game);			
+			io.to(game.gameID).emit('game_changed', game);
+			
+			
+			
+			if(game.cardsOnTable == 4){
+				var timer = setTimeout(function(){
+					game.finishRound();
+					io.to(game.gameID).emit('game_changed', game);
+				},2000, game);
+
+			}
+
+
+
+						
 		} else {
 			socket.emit('invalid_play', {
 				'type': 'Wrong_Turn',

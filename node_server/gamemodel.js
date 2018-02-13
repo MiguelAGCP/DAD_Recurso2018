@@ -14,9 +14,14 @@ class SuecaGame {
         this.winnerTeam = undefined;
         this.playerCount = undefined;
         this.playerTurn = undefined;
-        this.trumpCard = undefined;
+        this.trumpSuit = undefined;
         this.timer = undefined;
         this.players = [];
+        this.team1Points= undefined;
+        this.team2Points= undefined;
+        this.cardsOnTable = undefined;
+        this.rounds = 0;
+        this.cardToAssist = undefined;
         
         let player = {
             playerID: player_id,
@@ -26,11 +31,15 @@ class SuecaGame {
             team: 1,
             hand: [],
             cardTable: undefined,
-            avatar: playerAvatar
+            avatar: playerAvatar,
+            renuncia: false
 
         }
         this.playerCount = this.players.push(player);
-        }
+        this.team1Points = 0;
+        this.team2Points = 0;
+        this.cardsOnTable = 0;
+    }
 
         join(player_id, playerName, socket_id, playerAvatar) {
 
@@ -49,7 +58,8 @@ class SuecaGame {
                     team: teamNumber,
                     hand: [],
                     cardTable: undefined,
-                    avatar: playerAvatar
+                    avatar: playerAvatar,
+                    renuncia: false
                 }
                 this.playerCount = this.players.push(player);
                 return true;
@@ -65,6 +75,7 @@ class SuecaGame {
                 shuffle(deck);
             }
             deck[0].imageToShow = deck[0].image;
+            this.trumpSuit = deck[0].suit;
             let firstPlayerToReceiveCards = Math.floor(Math.random() * 4);
            
             this.nextPlayer(firstPlayerToReceiveCards);
@@ -94,31 +105,56 @@ class SuecaGame {
             //console.log("Deck: " + JSON.stringify(deck));
 
         }
-
-
-        play(player_id, index) {
-            console.log("PlayerID " + player_id);
+        play(player_id, cardIndex) {
+           /*  console.log("PlayerID " + player_id);
             console.log("PlayerTURN " + this.playerTurn);
-            console.log("CARD INDEX " + index);
+            console.log("CARD INDEX " + cardIndex); */
+            if (player_id == this.playerTurn) {
+                if (this.cardsOnTable < 4) {
+                    var playerIndex = this.players.findIndex(obj => obj.playerID == player_id);
+                    if (this.cardsOnTable == 0) {
+                        this.cardToAssist = this.players[playerIndex].hand[cardIndex].suit;
+                           /*  console.log("Card to assist " + this.cardToAssist);   */          
+                        
+                    } else {
+                        this.hasRenuncia(playerIndex, cardIndex);
+                    }
+                    this.players[playerIndex].cardTable = this.players[playerIndex].hand[cardIndex];
+                    this.players[playerIndex].hand.splice(cardIndex, 1);
+                    this.nextPlayer(playerIndex);
+                    this.cardsOnTable++;
+                }
 
-            if(player_id == this.playerTurn){
-                var playerIndex = this.players.findIndex(obj => obj.playerID==player_id);
-                this.players[playerIndex].cardTable = this.players[playerIndex].hand[index];
-                this.nextPlayer(playerIndex);
+               // console.log("Player " + playerIndex+1 + " renuncia: " + this.players[playerIndex].renuncia);
                 return true;
-            }else{
+            } else {
                 return false;
             }
+        }
+            hasRenuncia(playerIndex, cardIndex) {
+                /* console.log("Suit " + this.players[playerIndex].hand[cardIndex].suit); */
+                if (this.players[playerIndex].hand[cardIndex].suit != this.cardToAssist) {
 
-           
+                    /* console.log("Player hand length: " + this.players[playerIndex].hand.length); */
 
-            
-            //let playerIndex = playerNumber-1;
-           
+                    for (let i = 0; i < this.players[playerIndex].hand.length; i++) {
+                        if (this.players[playerIndex].hand[i].suit == this.cardToAssist) {
+                            this.players[playerIndex].renuncia = true;
+                        }
+                    }
+                }
+            }
 
-           // console.log(this.players[playerIndex].cardTable);
+        finishRound(){
+       /*      console.log("Player 1 renuncia: " + this.players[0].renuncia);
+            console.log("Player 2 renuncia: " + this.players[1].renuncia);
+            console.log("Player 3 renuncia: " + this.players[2].renuncia);
+            console.log("Player 4 renuncia: " + this.players[3].renuncia); */
 
-            return true;
+            this.cardsOnTable = 0;
+            for (let i = 0; i < 4; i++) {
+                this.players[i].cardTable = undefined;                        
+            }
         }
 
 
@@ -151,8 +187,12 @@ class SuecaGame {
 
 
         gameIsOver() {
-
-
+            if(rounds==10){
+                return true;
+            }
+            else{
+                return false;
+            }
         }
 
         createDeck(){
