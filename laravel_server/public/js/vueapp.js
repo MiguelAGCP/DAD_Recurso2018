@@ -19708,9 +19708,8 @@ var routes = [{
 var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]({
   routes: routes,
   hashbang: false,
-  history: true
-  //mode: 'history'
-
+  history: true,
+  mode: 'history'
 
 });
 
