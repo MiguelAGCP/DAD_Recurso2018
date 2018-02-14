@@ -140,11 +140,14 @@ export default {
           axios
             .get("api/users/getuserby"+logType+"/" + login, { headers: this.$store.state.user.headers})
             .then(response => {
+
+                //console.log(response);
          
               this.$store.commit('setNickname', response.data[0].nickname);
               this.$store.commit('setID', response.data[0].id);
               this.$store.commit('setName', response.data[0].name);
               this.$store.commit('setAvatar', response.data[0].avatar);
+              this.$store.commit('setEmail', response.data[0].email);
 
 
 

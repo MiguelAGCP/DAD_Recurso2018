@@ -7,10 +7,12 @@ use Illuminate\Contracts\Support\Jsonable;
 
 use App\Http\Resources\User as UserResource;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 use App\User;
 use App\StoreUserRequest;
 use Hash;
+use Carbon\Carbon;
 
 //use Intervention\Image\ImageManager;
 use Image;
@@ -104,18 +106,24 @@ class UserControllerAPI extends Controller
         
     }
 
-    public function updateAvatar(Request $request){
+    public function updateAvatar(Request $request, $id){
+        
+        $validator = Validator::make($request->all(), [
+            'image' => 'required|image64:jpeg,jpg,png'
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors'=>$validator->errors()]);
+        } else {
+            $imageData = $request->get('image');
+            $fileName = Carbon::now()->timestamp . '_' . uniqid() . '.' . explode('/', explode(':', substr($imageData, 0, strpos($imageData, ';')))[1])[1];
+            Image::make($request->get('image'))->save(public_path('img/avatars/').$fileName);
 
-    	// Handle the user upload of avatar
-    	if($request->hasFile('avatar')){
-    		$avatar = $request->file('avatar');
-    		$filename = time() . '.' . $avatar->getClientOriginalExtension();
-    		Image::make($avatar)->resize(300, 300)->save( public_path('/img/avatars/' . $filename ) );
-
-    		$user = User::findOrFail($request->id);
-    		$user->avatar = $filename;
+            $user = User::findOrFail($request->id);
+    		$user->avatar = $fileName;
     		$user->save();
-    	}
+
+            return response()->json(['error'=>false]);
+        }
     }
 
 

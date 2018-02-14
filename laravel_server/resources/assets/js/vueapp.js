@@ -85,6 +85,7 @@ const store = new Vuex.Store({
     user: {
       id: '',
       name: '',
+      email: '',
       nickname: '',
       avatar: '',
       admin: '',
@@ -121,6 +122,9 @@ const store = new Vuex.Store({
     setAvatar(state, avatar) {
       state.user.avatar = avatar;
     },
+    setEmail(state, email){
+      state.user.email = email;
+    }
 
   },
   getters: {
@@ -128,7 +132,7 @@ const store = new Vuex.Store({
       return state.user.email;
     },
     getName(state) {
-      return state.user.email;
+      return state.user.name;
     },
     getID(state) {
       return state.user.id;
@@ -161,7 +165,8 @@ const store = new Vuex.Store({
       'setAuthToken',
       'setRefreshToken',
       'setHeaders',
-      'setAvatar'
+      'setAvatar',
+      'setEmail'
     ])
   },
   computed: {

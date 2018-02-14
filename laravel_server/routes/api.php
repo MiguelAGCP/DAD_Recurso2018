@@ -32,7 +32,8 @@ Route::post('users', 'UserControllerAPI@store');
 Route::put('users/{id}', 'UserControllerAPI@update');
 Route::post('users/validatepass/{id}', 'UserControllerAPI@validatePass');
 Route::put('users/updatepass/{id}', 'UserControllerAPI@updatePass')->middleware('auth:api');
-Route::post('users/updateavatar/', 'UserControllerAPI@updateAvatar');
+Route::post('users/updateavatar/{id}', 'UserControllerAPI@updateAvatar');
+
 Route::delete('users/', 'UserControllerAPI@delete');
  
 Route::get('games/countusergames/{userid}','GameControllerAPI@countUserGames')->middleware('auth:api');
