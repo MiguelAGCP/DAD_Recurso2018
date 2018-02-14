@@ -93128,6 +93128,8 @@ exports.push([module.i, "\ntr.activerow[data-v-437a4046] {\n  \t\tbackground: #1
 //
 //
 //
+//
+//
 
 // Component code (not registered)
 module.exports = {
@@ -93149,6 +93151,9 @@ module.exports = {
 		definePlayer: function definePlayer(user, player) {
 			this.$root.$data['player' + player] = user;
 			this.$emit('message', user.name + ' selected as Player' + player);
+		},
+		avatarUrl: function avatarUrl(avatar) {
+			return "img/avatars/" + avatar;
 		}
 	}
 };
@@ -93171,6 +93176,13 @@ var render = function() {
           "tr",
           { key: user.id, class: { activerow: _vm.editingUser === user } },
           [
+            _c("td", [
+              _c("img", {
+                staticClass: "img-circle avatarBadge",
+                attrs: { src: _vm.avatarUrl(user.avatar) }
+              })
+            ]),
+            _vm._v(" "),
             _c("td", [_vm._v(_vm._s(user.name))]),
             _vm._v(" "),
             _c("td", [_vm._v(_vm._s(user.email))]),
@@ -93219,6 +93231,8 @@ var staticRenderFns = [
     var _c = _vm._self._c || _h
     return _c("thead", [
       _c("tr", [
+        _c("th", [_vm._v("Avatar")]),
+        _vm._v(" "),
         _c("th", [_vm._v("Name")]),
         _vm._v(" "),
         _c("th", [_vm._v("Email")]),
@@ -98728,18 +98742,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 
 
 var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
@@ -98769,7 +98771,6 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 
         };
     },
-
     methods: {
         onFileChange: function onFileChange(e) {
             this.files = e.target.files || e.dataTransfer.files;

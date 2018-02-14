@@ -19,6 +19,8 @@ class Game extends Resource
             'status' => $this->status,
             'player1' => $this->player1,
             'player2' => $this->player2,
+            'player3' => $this->player3,
+            'player4' => $this->player4,
             'winner' => $this->winner,
             'winnerName' => $this->getWinnerName(),
         ];

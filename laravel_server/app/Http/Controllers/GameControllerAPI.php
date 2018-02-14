@@ -120,12 +120,15 @@ class GameControllerAPI extends Controller
                 'player1' => 'required',
             ]);
         $game = new Game();
-        $game->fill($request->all());
+        //$game->fill($request->all());
+        $game->created_by = $request->player1;
+        $game->player1 = $request->player1;
         // No matter what status and winner was defined on the client.
         // When creating a game it will always assume "pending" status
         // and winner will be null
         $game->status = 'pending';
         $game->winner = null;
+        $game->type = $request->type;
         $game->save();
         return response()->json(new GameResource($game), 201);
     }
@@ -133,23 +136,29 @@ class GameControllerAPI extends Controller
     public function joinAndStart(Request $request, $id)
     {
         $player2 = $request->all()["player2"];
+        $player3 = $request->all()["player3"];
+        $player4 = $request->all()["player4"];
+        
         $game = Game::findOrFail($id);
-        if (!(is_null($game->player2) || ($game->player2 == ""))) {
+       /*  if (!(is_null($game->player2) || ($game->player2 == ""))) {
             return response()->json(array('code'=> 409, 'message' => 'Cannot join a game that already has a second player'), 409);
         }
         if (is_null($game->status) || ($game->status != "pending")) {
             return response()->json(array('code'=> 409, 'message' => 'Cannot join a game whose status is not "pending"'), 409);
-        }
+        } */
         $game->player2 = $player2;
+        $game->player3 = $player3;
+        $game->player4 = $player4;
         $game->status = 'active';
         $game->save();
-        return new GameResource($game);
+        //return new GameResource($game);
+        return response()->json(new GameResource($game), 201);
     }
 
     public function endgame($id, $winner)
     {
         $game = Game::findOrFail($id);
-        if (is_null($game->player1) || ($game->player1 == "")) {
+       /*  if (is_null($game->player1) || ($game->player1 == "")) {
             return response()->json(array('code'=> 409, 'message' => 'Cannot end a game that has no first player'), 409);
         }
         if (is_null($game->player2) || ($game->player2 == "")) {
@@ -160,7 +169,7 @@ class GameControllerAPI extends Controller
         }
         if (($winner != 0) && ($winner != 1) && ($winner != 2)) {
             return response()->json(array('code'=> 409, 'message' => 'To end a game winner must be 0 (tie), 1 (player1) or 2 (player2)'), 409);
-        }
+        } */
         $game->winner = $winner;
         $game->status = 'complete';
         $game->save();

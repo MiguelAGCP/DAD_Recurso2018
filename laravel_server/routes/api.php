@@ -20,6 +20,7 @@ Route::post('login', 'LoginControllerAPI@login');
 
 Route::post('storeuser', 'UserControllerAPI@store');
 
+Route::get('users/getAvatar/{id}', 'UserControllerAPI@getAvatar')->middleware('auth:api');
 Route::post('logout', 'LoginControllerAPI@logout');
 Route::get('users/getuserbymail/{email}', 'UserControllerAPI@getUserByMail')->middleware('auth:api');
 Route::get('users/getuserbynick/{email}', 'UserControllerAPI@getUserByNick')->middleware('auth:api');
@@ -54,6 +55,7 @@ Route::get('games/lobby', 'GameControllerAPI@lobby');
 Route::get('games/status/{status}', 'GameControllerAPI@gamesStatus');
 Route::get('games/{id}', 'GameControllerAPI@getGame');
 Route::post('games', 'GameControllerAPI@store');
+
 Route::patch('games/{id}/join-start', 'GameControllerAPI@joinAndStart');
 Route::patch('games/{id}/endgame/{winner}', 'GameControllerAPI@endgame');
 

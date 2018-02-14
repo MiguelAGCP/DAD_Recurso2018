@@ -13,9 +13,11 @@ class GameList {
     	return game;
     }
 
-    createGame(playerID, playerName, socketID, avatar) {
-    	this.contadorID = this.contadorID+1;
-    	var game = new SuecaGame(this.contadorID, playerID, playerName, socketID, avatar);
+    createGame(gameID, playerID, playerName, socketID, avatar) {
+    	//this.contadorID = this.contadorID+1;
+		//var game = new SuecaGame(this.contadorID, playerID, playerName, socketID, avatar);
+    	var game = new SuecaGame(gameID, playerID, playerName, socketID, avatar);
+		
     	//game.player1SocketID = socketID;
     	this.games.set(game.gameID, game);
     	return game;

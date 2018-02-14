@@ -155,18 +155,9 @@
                                     Remove
                                 </button>
                                 <router-link class="btn btn-primary" to="/play">Cancel</router-link>
-
-
                             </div>
-
-
-
-
-
                         </div>
                         <!-- Account Menu -->
-
-
                     </div>
                     <!--"panel-body"-->
                 </div>
@@ -177,9 +168,6 @@
         <!--"row"-->
     </div>
     <!--container-->
-
-    </div>
-
 
 </template>
 <script>
@@ -211,10 +199,6 @@
 
             }
         },
-
-
-
-
         methods: {
 
             onFileChange(e) {

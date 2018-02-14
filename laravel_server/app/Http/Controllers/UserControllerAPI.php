@@ -158,6 +158,13 @@ class UserControllerAPI extends Controller
 
         return UserResource::collection(User::all())->count();
     }
+    public function getAvatar (Request $request, $id){
+
+        return DB::table('users')->where('id', $id)->pluck('avatar');
+
+    }
+
+
     
 
     // FROM: https://laracasts.com/discuss/channels/laravel/validate-access-token-from-controller

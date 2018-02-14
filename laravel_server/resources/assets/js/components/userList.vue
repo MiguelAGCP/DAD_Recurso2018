@@ -2,6 +2,7 @@
 	<table class="table table-striped">
 	    <thead>
 	        <tr>
+	            <th>Avatar</th>				
 	            <th>Name</th>
 	            <th>Email</th>
 				<th>Nickname</th>
@@ -10,6 +11,7 @@
 	    </thead>
 	    <tbody>
 	        <tr v-for="user in users"  :key="user.id" :class="{activerow: editingUser === user}">
+	            <td><img :src="avatarUrl(user.avatar)" class="img-circle avatarBadge"></td>				
 	            <td>{{ user.name }}</td>
 	            <td>{{ user.email }}</td>
 				<td>{{ user.nickname }}</td>
@@ -43,6 +45,9 @@
 			definePlayer: function(user,player){
 				this.$root.$data['player'+player] = user;
 				this.$emit('message', user.name+' selected as Player'+player);
+			},
+			avatarUrl(avatar){
+				return "img/avatars/" + avatar;
 			}
         },		
 	}
