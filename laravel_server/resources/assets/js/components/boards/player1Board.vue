@@ -1,7 +1,8 @@
 <template>
     <div>
         <div>
-            <h2 class="text-center bg-primary text-white">Game {{ game.gameID }}</h2>
+            <h2 class="text-center bg-primary text-white">Game {{ game.gameID }} Player Turn: {{ currentPlayerNickname }}</h2>
+             <button class="btn-danger float-right" v-on:click.prevent="renuncia">Desconfiar</button>
             <br>
         </div>
         <div class="board container-fluid">
@@ -9,7 +10,9 @@
             <div class="row">
                 <div class="col-md-12" style="text-align:center">
                     <img :src="avatarURL(game.players[1].avatar)" class="img-circle avatarGame">
+
                 </div>
+
             </div>
             <div class="row">
                 <div class="col-md-12" style="text-align:center">
@@ -22,18 +25,17 @@
 
 
             <div class="row">
-                <div class="col-md-4">
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <img :src="avatarURL(game.players[2].avatar)" class="img-circle avatarGame">
-                            </div>
+                <div class="col-md-4 container">
+                    <div class="row">
+                        <div class="col-md-12" style="text-align:center">
+                            <img :src="avatarURL(game.players[2].avatar)" class="img-circle avatarGame">
                         </div>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div v-if="game.gameStarted">
-                                    <img v-for="card of game.players[2].hand" v-bind:src="cardImageURL(card.imageToShow)" class="oponentsHand">
-                                </div>
+
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12" style="text-align:center">
+                            <div v-if="game.gameStarted">
+                                <img v-for="card of game.players[2].hand" v-bind:src="cardImageURL(card.imageToShow)" class="oponentsHand">
                             </div>
                         </div>
                     </div>
@@ -68,21 +70,19 @@
                     </div>
                 </div>
                 <!-- RIGHT PLAYER HAND -->
-                <div class="col-md-4">
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <img :src="avatarURL(game.players[3].avatar)" class="img-circle avatarGame">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div v-if="game.gameStarted">
-                                    <img v-for="card of game.players[3].hand" v-bind:src="cardImageURL(card.imageToShow)" class="oponentsHand">
-                                </div>
-                            </div>
+                <div class="col-md-4 container">
+                    <div class="row">
+                        <div class="col-md-12" style="text-align:center">
+                            <img :src="avatarURL(game.players[3].avatar)" class="img-circle avatarGame">
                         </div>
 
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12" style="text-align:center">
+                            <div v-if="game.gameStarted">
+                                <img v-for="card of game.players[3].hand" v-bind:src="cardImageURL(card.imageToShow)" class="oponentsHand">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -102,10 +102,14 @@
             </div>
         </div>
         <hr>
+        <chat :game="game"></chat>
     </div>
 </template>
 
 <script type="text/javascript">
+
+  import Chat from '../chat.vue';
+
     export default {
         props: ['game'],
         data: function () {
@@ -125,7 +129,28 @@
             },
             avatarURL(avatar) {
                 return 'img/avatars/' + avatar;
+            },
+            renuncia(){
+                 this.$socket.emit("renuncia",{
+                     gameID: this.game.gameID,
+                     playerID: this.$store.getters.getID
+                     });
             }
-        }
+        },
+        computed: {
+            currentPlayerNickname() {
+                for (let i = 0; i < this.game.players.length; i++) {
+                    if (this.game.players[i].playerID == this.game.playerTurn) {
+                        console.log(this.game.players[i].playerID);
+                        return this.game.players[i].name;
+                    }
+
+                }
+            }
+
+        },       
+        components: {
+            'chat': Chat
+        },
     }
 </script>

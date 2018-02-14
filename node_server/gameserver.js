@@ -53,13 +53,24 @@ io.on('connection', function (socket) {
 		socket.emit('my_active_games_changed');
 	});
 
+	socket.on('renuncia', function (data) {
+		let game = games.startGame(data.gameID);
+		io.to(game.gameID).emit('verifying_Renuncia', "A verificar Renuncia");		
+		var renuncia = game.confirmRenuncia(data.playerID);
+		if (renuncia){
+			io.to(game.gameID).emit('renuncia', "Renuncia Verificada");
+			
+		}else{
+			io.to(game.gameID).emit('not_renuncia', "Renuncia NÃO Verificada");
+		}
+		io.to(game.gameID).emit('game_changed', game);
+	});
+
 	socket.on('play', function (data) {
 		console.log("PlayerID on gameserver.js " + data.playerID);
 		let game = games.gameByID(data.gameID);				
 		if (game.play(data.playerID, data.index)) {			
 			io.to(game.gameID).emit('game_changed', game);
-			
-			
 			
 			if(game.cardsOnTable == 4){
 				var timer = setTimeout(function(){
@@ -67,11 +78,7 @@ io.on('connection', function (socket) {
 					io.to(game.gameID).emit('game_changed', game);
 				},2000, game);
 
-			}
-
-
-
-						
+			}	
 		} else {
 			socket.emit('invalid_play', {
 				'type': 'Wrong_Turn',

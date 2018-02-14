@@ -185,9 +185,5 @@ const app = new Vue({
   router,
   store,
   data: {
-    player1: undefined,
-    player2: undefined,
-    player3: undefined,
-    player4: undefined
   }
 }).$mount('#app');

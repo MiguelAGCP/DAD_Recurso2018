@@ -2,20 +2,6 @@
     <div>
         <nav-bar></nav-bar>
         <div>
-            <!-- <h3 class="text-center">{{ title }}</h3>
-
-            
-            <br>
-            <h2>Current Player : {{ currentPlayer }}</h2>
-            <p>Set current player name
-                <input v-model.trim="currentPlayer">
-            </p>
-            <p>
-                <em>Player name replaces authentication! Use different names on different browsers, and don't change it frequently.</em>
-            </p>
-            <hr> -->
-
-
 
             <h3 class="text-center">Lobby</h3>
             <p>
@@ -26,7 +12,8 @@
                 <a @click.prevent="loadLobby">Refresh</a>)</h4>
             <lobby :games="lobbyGames" @join-click="join" @start-game="start"></lobby>
             <template v-for="game in activeGames">
-                <game :game="game" @start-game="start" @play="play" @send-message="sendMessage"></game>
+                <!-- <game :game="game" @start-game="start" @play="play" @send-message="sendMessage"></game> -->
+                <game :game="game" @start-game="start" @play="play"></game>
             </template>
         </div>
     </div>
@@ -99,7 +86,7 @@
                         console.table(game.players[0].cardTable);
                         if (activeGame.gameEnded) {
                             alert("Game " + activeGame.gameID + " has Ended \n The winner is: " +
-                                activeGame.players[activeGame.winner - 1].playerName);
+                                activeGame.winnerTeam);
                         }
                         break;
                     }
@@ -163,10 +150,11 @@
                     gameID: game.gameID,
                 });
             },
-            sendMessage(data) {
+            /* sendMessage(data) {
                 this.$socket.emit("sendMessage", data);
-            }
+            } */
         },
+        
         components: {
             'lobby': Lobby,
             'game': Game,

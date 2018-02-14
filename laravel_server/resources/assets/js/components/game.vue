@@ -1,14 +1,12 @@
 <template>
     <div>
-
-
-        <player1-board :game="game" v-if="game.gameStarted && game.players[0] && game.players[0].playerID == $store.state.user.id"
+        <player1-board :game="game" v-if="game.gameStarted && !game.gameEnded && game.players[0] && game.players[0].playerID == $store.state.user.id"
             @play="play"></player1-board>
-        <player2-board :game="game" v-if="game.gameStarted && game.players[1] && game.players[1].playerID == $store.state.user.id"
+        <player2-board :game="game" v-if="game.gameStarted && !game.gameEnded && game.players[1] && game.players[1].playerID == $store.state.user.id"
             @play="play"></player2-board>
-        <player3-board :game="game" v-if="game.gameStarted && game.players[2] && game.players[2].playerID == $store.state.user.id"
+        <player3-board :game="game" v-if="game.gameStarted && !game.gameEnded && game.players[2] && game.players[2].playerID == $store.state.user.id"
             @play="play"></player3-board>
-        <player4-board :game="game" v-if="game.gameStarted && game.players[3] && game.players[3].playerID == $store.state.user.id"
+        <player4-board :game="game" v-if="game.gameStarted && !game.gameEnded && game.players[3] && game.players[3].playerID == $store.state.user.id"
             @play="play"></player4-board>
 
     </div>
@@ -29,18 +27,19 @@
             }
         },
         sockets: {
-            message_received(data) {
+            verifying_Renuncia(msg){
+                alert(msg);
+            },
 
-                if (this.game.gameID == data.gameID) {
-                    let playerAndMessage = {
-                        playerName: data.playerName,
-                        message: data.message
-                    }
-                    this.messages.push(playerAndMessage);
-                }
-            }
+           renuncia(msg){
+                alert(msg);               
+           },
 
-        },
+           not_renuncia(msg){
+                alert(msg);               
+           },
+
+        }, 
         computed: {
             ownPlayerNumber() {
                 if (this.game.players[0].playerID == this.$store.state.user.id) {
@@ -52,7 +51,6 @@
                 } else if (this.game.players[3].playerID == this.$store.state.user.id) {
                     return 4;
                 }
-
                 return 0;
             },
         },

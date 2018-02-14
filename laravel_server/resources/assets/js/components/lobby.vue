@@ -14,15 +14,15 @@
 			<tbody>
 				<tr v-for="game in games"  :key="game.gameID">
 					<td>{{ game.gameID }}</td>
-					<td> {{game.players[0].name}}</td>
+					<td> {{game.players[0].name}} Team: {{game.players[0].team}}</td>
 
-					<td v-if="game.players[1]"> {{game.players[1].name}}</td>
+					<td v-if="game.players[1]"> {{game.players[1].name}} Team: {{game.players[1].team}}</td>
 					<td v-if="!game.players[1]"> Waiting for player 2</td>
 
-					<td v-if="game.players[2]"> {{game.players[2].name}}</td>
+					<td v-if="game.players[2]"> {{game.players[2].name}} Team: {{game.players[2].team}}</td>
 					<td v-if="!game.players[2]"> Waiting for player 3</td>
 
-					<td v-if="game.players[3]"> {{game.players[3].name}}</td>
+					<td v-if="game.players[3]"> {{game.players[3].name}} Team: {{game.players[3].team}}</td>
 					<td v-if="!game.players[3]"> Waiting for player 4</td>
 
 					<td>

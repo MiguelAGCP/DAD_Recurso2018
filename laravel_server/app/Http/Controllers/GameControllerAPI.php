@@ -182,10 +182,6 @@ class GameControllerAPI extends Controller
 
 
     }
-
-
-
-
     public function gamesByWinner($user){
 
         return GameResource::collection(Game::where('winner', $user)->get());
