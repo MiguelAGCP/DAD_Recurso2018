@@ -176,54 +176,54 @@ export default {
 		  userDefeats: 0,
 		  userDraws: 0,
 		  userAvg: 0,
-		  userScore: 0
-
+		  userScore: 0,
+			config: { headers: this.$store.getters.getHeaders},
 			
     };
   },
   methods: {
     getGamesResults() {
-      axios.get("api/games/terminatedgames").then(response => {
+      axios.get("api/games/terminatedgames",this.config).then(response => {
         console.log("Terminated:" + response.data);
         this.termGames = response.data;
       });
 
-      axios.get("api/games/pendgames").then(response => {
+      axios.get("api/games/pendgames",this.config).then(response => {
         console.log("Pending:" + response.data);
         this.pendGames = response.data;
       });
-      axios.get("api/games/activegames").then(response => {
+      axios.get("api/games/activegames",this.config).then(response => {
         this.actGames = response.data;
         console.log("active:" + response.data);
       });
 
-      axios.get("api/games/canceledgames").then(response => {
+      axios.get("api/games/canceledgames",this.config).then(response => {
         this.cancGames = response.data;
         console.log("Canceled:" + response.data);
       });
     },
 
     getTopS5cores() {
-      axios.get("api/games/gettop5scores").then(response => {
+      axios.get("api/games/gettop5scores",this.config).then(response => {
         this.top5Scores = response.data;
       });
     },
     getTopGames() {
-      axios.get("api/games/gettop5games").then(response => {
+      axios.get("api/games/gettop5games",this.config).then(response => {
         this.top5Games = response.data;
         console.log(this.top5Games);
       });
     },
 
     getTop5Avg() {
-      axios.get("api/games/gettop5average").then(response => {
+      axios.get("api/games/gettop5average",this.config).then(response => {
         this.top5Avg = response.data;
         console.log(this.top5Avg);
       });
     },
 
     getTotUsers() {
-      axios.get("api/users/contusers").then(response => {
+      axios.get("api/users/contusers",this.config).then(response => {
         this.totUsers = response.data;
         console.log(this.totUsers);
       });
@@ -233,34 +233,34 @@ export default {
 
 
 
-      axios.get("api/games/countusergames/" + userID).then(response => {
+      axios.get("api/games/countusergames/" + userID, this.config).then(response => {
 				this.userGames = response.data;
 					console.log("Games:" + this.userGames);
 			});
 
-			axios.get("api/games/countuservictories/" + userID).then(response => {
+			axios.get("api/games/countuservictories/" + userID,this.config).then(response => {
 				this.userVictories = response.data;
 					console.log("Victories:" + this.userVictories);
 			});
 
 
-			axios.get("api/games/countuserdraws/" + userID).then(response => {
+			axios.get("api/games/countuserdraws/" + userID,this.config).then(response => {
 				this.userDraws = response.data;
 					console.log("Draws:" + this.userDraws);
 			});
 
 
-			axios.get("api/games/countuserdefeats/" + userID).then(response => {
+			axios.get("api/games/countuserdefeats/" + userID,this.config).then(response => {
 				this.userDefeats = response.data;
 					console.log("Defeats:" + this.userDefeats);
 			});
 
-			axios.get("api/games/countuserscore/" + userID).then(response => {
+			axios.get("api/games/countuserscore/" + userID,this.config).then(response => {
 				this.userScore = response.data;
 					console.log("Score:" + this.userScore);
 			});
 
-			axios.get("api/games/countuseravg/" + userID).then(response => {
+			axios.get("api/games/countuseravg/" + userID,this.config).then(response => {
 				this.userAvg = response.data;
 					console.log("Avg:" + this.userAvg);
 			});

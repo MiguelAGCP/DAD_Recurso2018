@@ -197,6 +197,7 @@
 			    userNick: this.$store.getters.getNickname,
                 userNname: this.$store.getters.getName,
                 userEmail: this.$store.getters.getEmail,
+                config: { headers: this.$store.getters.getHeaders},
 
 			}
 		},
@@ -228,7 +229,7 @@
                 console.log("UserID:" + this.currentUserID);
                 console.log("UserID:" + this.oldPassword);
 
-                axios.post('api/users/validatepass/' + this.currentUserID, {password: this.oldPassword} )
+                axios.post('api/users/validatepass/' + this.currentUserID, {password: this.oldPassword})
                 .then(response=>{
 
                         if(response.data.msg=="ok" ) this.checkedPass = true;
@@ -244,7 +245,7 @@
                if(this.newPassword == this.rePassword)
                 {
                     if(this.checkedPass){
-                   axios.put('api/users/updatepass/'+this.currentUserID, {password:this.newPassword})
+                   axios.put('api/users/updatepass/'+this.currentUserID, {password:this.newPassword}, this.config)
                    .then(response=>{
 
                         

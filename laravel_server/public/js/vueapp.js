@@ -19706,9 +19706,9 @@ var routes = [{
   component: useraccount }];
 
 var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]({
-  routes: routes
-  //hashbang: false,
-  //history: true,
+  routes: routes,
+  hashbang: false,
+  history: true
   //mode: 'history'
 
 
@@ -93486,8 +93486,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
-      activeIndex: '1',
-      activeIndex2: '1'
+      activeIndex: '1'
     };
   },
 
@@ -93562,7 +93561,7 @@ var render = function() {
               {
                 staticClass: "el-menu-demo",
                 attrs: {
-                  "default-active": _vm.activeIndex2,
+                  "default-active": _vm.activeIndex,
                   mode: "horizontal",
                   "background-color": "#545c64",
                   "text-color": "#fff",
@@ -93571,16 +93570,18 @@ var render = function() {
                 on: { select: _vm.handleSelect }
               },
               [
-                _c(
-                  "el-menu-item",
-                  { attrs: { index: "1" } },
-                  [
-                    _c("router-link", { attrs: { to: "/dash" } }, [
-                      _vm._v("Dashboard")
-                    ])
-                  ],
-                  1
-                ),
+                this.$store.getters.getAdmin == true
+                  ? _c(
+                      "el-menu-item",
+                      { attrs: { index: "1" } },
+                      [
+                        _c("router-link", { attrs: { to: "/dash" } }, [
+                          _vm._v("Dashboard")
+                        ])
+                      ],
+                      1
+                    )
+                  : _vm._e(),
                 _vm._v(" "),
                 _c(
                   "el-menu-item",
@@ -93623,7 +93624,7 @@ var render = function() {
               {
                 staticClass: "el-menu-demo",
                 attrs: {
-                  "default-active": _vm.activeIndex1,
+                  "default-active": _vm.activeIndex,
                   mode: "horizontal",
                   "background-color": "#545c64",
                   "text-color": "#fff",
@@ -97506,7 +97507,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
       userDefeats: 0,
       userDraws: 0,
       userAvg: 0,
-      userScore: 0
+      userScore: 0,
+      config: { headers: this.$store.getters.getHeaders }
 
     };
   },
@@ -97514,21 +97516,21 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     getGamesResults: function getGamesResults() {
       var _this = this;
 
-      axios.get("api/games/terminatedgames").then(function (response) {
+      axios.get("api/games/terminatedgames", this.config).then(function (response) {
         console.log("Terminated:" + response.data);
         _this.termGames = response.data;
       });
 
-      axios.get("api/games/pendgames").then(function (response) {
+      axios.get("api/games/pendgames", this.config).then(function (response) {
         console.log("Pending:" + response.data);
         _this.pendGames = response.data;
       });
-      axios.get("api/games/activegames").then(function (response) {
+      axios.get("api/games/activegames", this.config).then(function (response) {
         _this.actGames = response.data;
         console.log("active:" + response.data);
       });
 
-      axios.get("api/games/canceledgames").then(function (response) {
+      axios.get("api/games/canceledgames", this.config).then(function (response) {
         _this.cancGames = response.data;
         console.log("Canceled:" + response.data);
       });
@@ -97536,14 +97538,14 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     getTopS5cores: function getTopS5cores() {
       var _this2 = this;
 
-      axios.get("api/games/gettop5scores").then(function (response) {
+      axios.get("api/games/gettop5scores", this.config).then(function (response) {
         _this2.top5Scores = response.data;
       });
     },
     getTopGames: function getTopGames() {
       var _this3 = this;
 
-      axios.get("api/games/gettop5games").then(function (response) {
+      axios.get("api/games/gettop5games", this.config).then(function (response) {
         _this3.top5Games = response.data;
         console.log(_this3.top5Games);
       });
@@ -97551,7 +97553,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     getTop5Avg: function getTop5Avg() {
       var _this4 = this;
 
-      axios.get("api/games/gettop5average").then(function (response) {
+      axios.get("api/games/gettop5average", this.config).then(function (response) {
         _this4.top5Avg = response.data;
         console.log(_this4.top5Avg);
       });
@@ -97559,7 +97561,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     getTotUsers: function getTotUsers() {
       var _this5 = this;
 
-      axios.get("api/users/contusers").then(function (response) {
+      axios.get("api/users/contusers", this.config).then(function (response) {
         _this5.totUsers = response.data;
         console.log(_this5.totUsers);
       });
@@ -97567,32 +97569,32 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
     refreshUserStats: function refreshUserStats(userID) {
       var _this6 = this;
 
-      axios.get("api/games/countusergames/" + userID).then(function (response) {
+      axios.get("api/games/countusergames/" + userID, this.config).then(function (response) {
         _this6.userGames = response.data;
         console.log("Games:" + _this6.userGames);
       });
 
-      axios.get("api/games/countuservictories/" + userID).then(function (response) {
+      axios.get("api/games/countuservictories/" + userID, this.config).then(function (response) {
         _this6.userVictories = response.data;
         console.log("Victories:" + _this6.userVictories);
       });
 
-      axios.get("api/games/countuserdraws/" + userID).then(function (response) {
+      axios.get("api/games/countuserdraws/" + userID, this.config).then(function (response) {
         _this6.userDraws = response.data;
         console.log("Draws:" + _this6.userDraws);
       });
 
-      axios.get("api/games/countuserdefeats/" + userID).then(function (response) {
+      axios.get("api/games/countuserdefeats/" + userID, this.config).then(function (response) {
         _this6.userDefeats = response.data;
         console.log("Defeats:" + _this6.userDefeats);
       });
 
-      axios.get("api/games/countuserscore/" + userID).then(function (response) {
+      axios.get("api/games/countuserscore/" + userID, this.config).then(function (response) {
         _this6.userScore = response.data;
         console.log("Score:" + _this6.userScore);
       });
 
-      axios.get("api/games/countuseravg/" + userID).then(function (response) {
+      axios.get("api/games/countuseravg/" + userID, this.config).then(function (response) {
         _this6.userAvg = response.data;
         console.log("Avg:" + _this6.userAvg);
       });
@@ -98156,7 +98158,8 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
          uploadFieldName: 'photos',
          userNick: this.$store.getters.getNickname,
          userNname: this.$store.getters.getName,
-         userEmail: this.$store.getters.getEmail
+         userEmail: this.$store.getters.getEmail,
+         config: { headers: this.$store.getters.getHeaders }
 
       };
    },
@@ -98188,7 +98191,7 @@ var router = new __WEBPACK_IMPORTED_MODULE_0_vue_router__["a" /* default */]();
 
          if (this.newPassword == this.rePassword) {
             if (this.checkedPass) {
-               axios.put('api/users/updatepass/' + this.currentUserID, { password: this.newPassword }).then(function (response) {
+               axios.put('api/users/updatepass/' + this.currentUserID, { password: this.newPassword }, this.config).then(function (response) {
 
                   alert("Password changed Successfully!");
                   _this.clearPassForm();

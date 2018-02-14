@@ -69,9 +69,9 @@ const routes = [{
 
 const router = new VueRouter({
   routes: routes,
-  //hashbang: false,
-  //history: true,
-  //mode: 'history'
+  hashbang: false,
+  history: true,
+  mode: 'history'
 
 
 });
