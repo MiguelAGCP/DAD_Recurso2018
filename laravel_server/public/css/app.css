@@ -8375,8 +8375,83 @@ button.close {
   overflow-y: scroll;
 }
 
+/* .board{
+    max-width: 720px;
+    margin: 0 auto;
+    height: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+	// border-style: solid;
+	// border-width: 0px 0 0 0px;
+    // border-color: black;
+    background:rgb(26, 163, 30);
+    border-radius: 20px;
+    
+    div{
+        display: inline-block;
+        //border-style: solid;
+        //border-width: 1px;
+        // border-width: 2px 2px 2px 2px;
+        border-color: black;
+        margin-left: -2px;
+        margin-top: -2px;
+    }
+
+    img{
+        border-style: solid;
+        border-width: 1px;
+        border-color: black;
+        width: 40px;
+        height: 40px;
+        margin: 4px;
+        padding: 0;
+        //border-style: none;
+    }
+} */
+
+.myHand {
+  max-width: 40px;
+  margin: 2px;
+  padding: 0px;
+}
+
+.teamMateHand {
+  max-width: 40px;
+  margin: 2px;
+  padding: 0px;
+}
+
+.myHand:hover {
+  -webkit-transform: scale(2);
+          transform: scale(2);
+  margin: 2px;
+  padding: 0px;
+  position: absolute;
+}
+
+.oponentsHand {
+  max-width: 40px;
+  margin: -8px;
+  padding: 0px;
+  /* transform: rotate(90deg); */
+}
+
+.playedCard {
+  max-width: 40px;
+  margin: 4px;
+  padding: 0px;
+}
+
+/* .playedCard:hover{
+    transform: scale(2);
+    margin: 2px;
+    padding: 0px;
+    position: absolute;
+} */
+
 .board {
-  max-width: 276px;
+  /* max-width: 720px; */
   margin: 0 auto;
   height: 100%;
   display: block;
@@ -8386,22 +8461,17 @@ button.close {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
+  background: #1aa31e;
+  border-radius: 20px;
 }
 
-.board div {
-  display: inline-block;
-  border-color: black;
-  margin-left: -2px;
-  margin-top: -2px;
+.avatarBadge {
+  height: 32px;
+  width: 32px;
 }
 
-.board img {
-  border-style: solid;
-  border-width: 1px;
-  border-color: black;
-  width: 40px;
-  height: 40px;
-  margin: 4px;
-  padding: 0;
+.avatarGame {
+  height: 64px;
+  width: 64px;
 }
 

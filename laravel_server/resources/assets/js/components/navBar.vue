@@ -9,38 +9,27 @@
                             <el-menu-item index="3"><router-link to="/statistics">Statistics</router-link></el-menu-item>
                         </el-menu>
             </div>
-<<<<<<< HEAD
 
 
 
           <div class="dropdown col-md-1" align="left" style="z-index:5">
               <el-menu :default-active="activeIndex1" class="el-menu-demo" mode="horizontal" @select="handleSelect" background-color="#545c64" text-color="#fff" active-text-color="#ffd04b">
              <el-submenu index="4">
-                    <template slot="title">{{$store.state.user.nickname}}</template>
+                    <template slot="title"><img :src="myAvatar" class="img-circle avatarBadge">
+               {{$store.state.user.nickname}}</template>
                     <el-menu-item index="3-1"><router-link to="/useraccount">  My Account</router-link></el-menu-item>
-                    <el-menu-item index="3-2" v-on:click.prevent="logout()">Logout</el-menu-item>
+                    <el-menu-item index="3-2" v-on:click="logout()">Logout</el-menu-item>
             </el-submenu>
             </el-menu>
-            
-=======
-          <div class="dropdown col-md-1" align="left">
-                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <img :src="myAvatar" class="img-circle avatarBadge">
-                {{$store.state.user.nickname}}
-                </button>
-                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                      <p class="dropdown-item" ><router-link to="/useraccount">  My Account</router-link></p>
-                      <p class="dropdown-item" v-on:click.prevent="logout()"><router-link to="/index">  Logout</router-link></p>                  
-                </div>
-                
->>>>>>> b52a5c7cbf400b404c68f70f4dbf6cac8244da67
-          </div>
-
+                    </div>
 
         </div>
 
     </div>
 </template>
+
+
+
 <script>
 
         import VueRouter from "vue-router";
@@ -63,10 +52,7 @@
         console.log(key, keyPath);
       },
 
-            logout: function(){
-
-            //    console.log("Logging Out");
-            //    console.log(this.$store.state.user.headers.Authorization);
+            logout(){
 
                  var config = {
             headers: {
@@ -75,8 +61,7 @@
             }
           };
             //     console.log("Logging Out");
-            //    console.log(config);
-
+          
 
 
                 axios.post('api/logout', config).then(response=>{

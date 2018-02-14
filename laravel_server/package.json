@@ -22,6 +22,7 @@
     "element-ui": "^2.0.11",
     "npm-watch": "^0.3.0",
     "shuffle-array": "^1.0.1",
+    "vue-picture-input": "^2.1.1",
     "vue-router": "^3.0.1",
     "vue-socket.io": "^2.1.1-a",
     "vuex": "^3.0.1",

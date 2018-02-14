@@ -60,6 +60,9 @@ const routes = [{
   { 
     path: '/register',
     component: register},
+    { 
+      path: '/useraccount',
+      component: useraccount},
 ];
 
 
@@ -81,6 +84,7 @@ const store = new Vuex.Store({
   state: {
     user: {
       id: '',
+      name: '',
       nickname: '',
       avatar: '',
       admin: '',
@@ -98,6 +102,9 @@ const store = new Vuex.Store({
     },
     setNickname(state, nickname) {
       state.user.nickname = nickname;
+    },
+    setName(state, name) {
+      state.user.name = name;
     },
     setAdmin(state, admin) {
       state.user.admin = admin;
@@ -117,6 +124,12 @@ const store = new Vuex.Store({
 
   },
   getters: {
+    getEmail(state) {
+      return state.user.email;
+    },
+    getName(state) {
+      return state.user.email;
+    },
     getID(state) {
       return state.user.id;
     },
@@ -153,6 +166,8 @@ const store = new Vuex.Store({
   },
   computed: {
     ...mapGetters([
+      'getName',
+      'getEmail',
       'getID',
       'getNickname',
       'getAuthToken',

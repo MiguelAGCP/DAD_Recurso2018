@@ -75,10 +75,6 @@
 			'user-list': UserList,
 			'user-edit': UserEdit,
 			'nav-bar': NavBar,
-<<<<<<< HEAD
-
-=======
->>>>>>> b52a5c7cbf400b404c68f70f4dbf6cac8244da67
 		},
 		mounted() {
 			this.getUsers();

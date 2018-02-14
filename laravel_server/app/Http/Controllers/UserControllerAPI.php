@@ -12,6 +12,10 @@ use App\User;
 use App\StoreUserRequest;
 use Hash;
 
+//use Intervention\Image\ImageManager;
+use Image;
+
+
 class UserControllerAPI extends Controller
 {
     public function getUsers(Request $request)
@@ -45,6 +49,47 @@ class UserControllerAPI extends Controller
         return response()->json(new UserResource($user), 201);
     }
 
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+                'name' => 'required',
+                'email' => 'required|email|unique:users,email,'.$id,
+            ]);
+        $user = User::findOrFail($id);
+        $user->update($request->all());
+        return new UserResource($user);
+    }
+
+
+    
+    public function validatePass(Request $request, $id)
+    {
+        $oldPass = $request->password;
+        $hashedPassword = DB::table('users')->where('id', '=',$id)->value('password');
+        if (Hash::check( $oldPass, $hashedPassword))
+        return response()->json(['msg'=>'ok'], 200);
+        else
+        return response()->json(['msg'=>'error'], 200);
+       
+    }
+
+
+
+    public function updatePass(Request $request, $id)
+    {
+
+           $request->validate([
+                'password' => 'min:3'
+            ]);
+       
+        $user = User::findOrFail($id);
+        $user->password = (Hash::make($request->password));
+        $user->save();
+        return new UserResource($user);
+      
+    }
+
+
     public function getUserByMail(Request $request, $email)
     {
    
@@ -59,26 +104,29 @@ class UserControllerAPI extends Controller
         
     }
 
+    public function updateAvatar(Request $request){
 
+    	// Handle the user upload of avatar
+    	if($request->hasFile('avatar')){
+    		$avatar = $request->file('avatar');
+    		$filename = time() . '.' . $avatar->getClientOriginalExtension();
+    		Image::make($avatar)->resize(300, 300)->save( public_path('/img/avatars/' . $filename ) );
 
-
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-                'name' => 'required',
-                'email' => 'required|email|unique:users,email,'.$id,
-            ]);
-        $user = User::findOrFail($id);
-        $user->update($request->all());
-        return new UserResource($user);
+    		$user = User::findOrFail($request->id);
+    		$user->avatar = $filename;
+    		$user->save();
+    	}
     }
 
-    public function delete($id)
+
+
+ 
+    public function delete(Request $request)
     {
         $user = User::findOrFail($id);
         $user->delete();
-        //return response()->json(null, 204);
-        return $user;
+        return response()->json(null, 204);
+
     }
     public function emailAvailable(Request $request)
     {

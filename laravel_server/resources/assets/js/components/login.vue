@@ -143,6 +143,7 @@ export default {
          
               this.$store.commit('setNickname', response.data[0].nickname);
               this.$store.commit('setID', response.data[0].id);
+              this.$store.commit('setName', response.data[0].name);
               this.$store.commit('setAvatar', response.data[0].avatar);
 
 
@@ -165,7 +166,7 @@ export default {
   mounted() {},
 
      beforeCreate(){
-            document.body.className = 'login';
+       
         }
   }
 

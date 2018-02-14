@@ -20,7 +20,6 @@ Route::post('login', 'LoginControllerAPI@login');
 
 Route::post('storeuser', 'UserControllerAPI@store');
 
-
 Route::post('logout', 'LoginControllerAPI@logout');
 Route::get('users/getuserbymail/{email}', 'UserControllerAPI@getUserByMail')->middleware('auth:api');
 Route::get('users/getuserbynick/{email}', 'UserControllerAPI@getUserByNick')->middleware('auth:api');
@@ -31,7 +30,10 @@ Route::get('users/emailavailable', 'UserControllerAPI@emailAvailable');
 Route::get('users/{id}', 'UserControllerAPI@getUser');
 Route::post('users', 'UserControllerAPI@store');
 Route::put('users/{id}', 'UserControllerAPI@update');
-Route::delete('users/{id}', 'UserControllerAPI@delete');
+Route::post('users/validatepass/{id}', 'UserControllerAPI@validatePass');
+Route::put('users/updatepass/{id}', 'UserControllerAPI@updatePass');
+Route::post('users/updateavatar/', 'UserControllerAPI@updateAvatar');
+Route::delete('users/', 'UserControllerAPI@delete');
  
 Route::get('games/countusergames/{userid}','GameControllerAPI@countUserGames');
 Route::get('games/countuservictories/{userid}','GameControllerAPI@countUserVictories');

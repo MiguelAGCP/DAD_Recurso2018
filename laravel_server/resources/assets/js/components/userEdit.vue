@@ -31,7 +31,6 @@
 
 <script type="text/javascript">
 	module.exports={
-		props: ['user'],
 	    methods: {
 	        saveUser: function(){
 	            axios.put('api/users/'+this.user.id, this.user)
